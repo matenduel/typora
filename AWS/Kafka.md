@@ -67,6 +67,32 @@ https://needjarvis.tistory.com/607
 
 
 
+#### Zookeeper
+
+컨슈머와 통신, 카프카의 메타데이터 정보를 저장, 카프카의 상태관리 등 목적으로 이용
+
+
+
+### 구축 방법
+
+helm 이용 [링크](https://blog.advenoh.pe.kr/cloud/%ED%97%AC%EB%A6%84%EC%9C%BC%EB%A1%9C-Kafka-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0/) 
+
+
+
+#### 구축 관련 이야기 & Topic 자동 생성 기능
+
+https://epicdevs.com/20
+
+
+
+#### Monitoring 방법
+
+[Burrow](https://engineering.linkedin.com/apache-kafka/burrow-kafka-consumer-monitoring-reinvented)
+
+https://docs.bitnami.com/kubernetes/infrastructure/kafka/administration/enable-metrics/
+
+
+
 
 
 ### Ref
