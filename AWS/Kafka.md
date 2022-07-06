@@ -109,6 +109,10 @@ https://docs.bitnami.com/kubernetes/infrastructure/kafka/administration/enable-m
 
 
 
+### 기타 
+
+kafka + sink connetor를 이용하여 로깅 처리나 이벤트 처리해도 될듯?
+
 
 
 ### Ref
