@@ -93,6 +93,22 @@ https://docs.bitnami.com/kubernetes/infrastructure/kafka/administration/enable-m
 
 
 
+## Connector
+
+
+
+- MongoDB
+
+1. Sink Connector
+
+   Kafka -> MongoDB
+
+2. Source Connector
+
+   MongoDB -> Kafka
+
+
+
 
 
 ### Ref
