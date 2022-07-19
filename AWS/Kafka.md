@@ -120,15 +120,58 @@
 
 
 
-## config? (helm-values.yaml)
+## Parameters (values.yaml)
+
+> Reference Document (https://github.com/bitnami/charts/tree/master/bitnami/kafka/)
 
 ![img](https://velog.velcdn.com/images%2Fhyeondev%2Fpost%2Fe1919472-63ec-4846-8230-abce247e5489%2Fimg%20(1).png)
 
-* Replication factor
+### Kafka
+
+* logsDirs
+* logRetentionBytes
+* logRetentionCheckIntervalMs
+* logRetentionHours
+* defaultReplicationFactor
+  * 기본 replicationFactor 값
+  * 지정된 숫자와 동일한 broker에 저장된다
+
+* numPartitions
+* maxMessageBytes
+
+### Statefulset
+
+* replicaCount
+  * Kafka Broker 갯수 (Number of Kafka nodes)
+
+### ZooKeeper
+
+* replicaCount
+  * zookeeper  갯수 (Number of ZooKeeper nodes)
 
 
 
+### Traffic Exposure
 
+* externalAccess.enabled
+* externalAccess.autoDiscovery.enabled
+* externalAccess.service.type
+* 
+
+
+
+### DNS
+
+* 
+
+
+
+### Other
+
+* serviceAccount.create
+* serviceAccount.name
+* serviceAccount.annotations
+* rbac.create
 
 
 
@@ -203,3 +246,4 @@ https://docs.bitnami.com/kubernetes/infrastructure/kafka/administration/enable-m
 4. https://blog.voidmainvoid.net/475
 5. https://sarc.io/index.php/miscellaneous/1436-kafka
 6. https://presentlee.tistory.com/5
+7. https://velog.io/@hyeondev/Apache-Kafka-%EC%9D%98-%EA%B8%B0%EB%B3%B8-%EC%95%84%ED%82%A4%ED%85%8D%EC%B3%90
