@@ -18,12 +18,17 @@ CNCF 선정 Secrets Managements 부분 1위 선정 [(링크)](https://radar.cncf
 
 ### 1.2.1. 장점
 
-* Dynamic Role
-* 
+* Dynamic / Static Role
+* 유저별로 권한 관리 및 CIDR 적용 가능
+* 다양한 Secrete Engine
 
 
 
 ### 1.2.2. 단점
+
+* 비용 (Hasicorp Cloud 경우)
+* Dynamic / Static Role을 사용하기 위해서 코드 개선이 필요함
+* 
 
 
 
@@ -41,20 +46,65 @@ CNCF 선정 Secrets Managements 부분 1위 선정 [(링크)](https://radar.cncf
 
 # 2. Installation
 
-* Docker
+## 2.1. Docker
 
-    * ㅇㅇㅇ
+```shell
+# Docker 실행 명령어
+docker run --cap-add=IPC_LOCK -d --name=dev-vault -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_ADDR=http://127.0.0.1:8200' --rm vault:1.9.5
+```
 
-    ```shell
-    # Docker 실행 명령어
-    docker run --cap-add=IPC_LOCK -d --name=dev-vault -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_ADDR=http://127.0.0.1:8200' --rm vault:1.9.5
-    ```
+## 2.2. Helm Chart
 
-* Helm Chart
-    * Default
-    * HA Mode
-* Hashi Cloud
-    * 
+> Official helm chart 
+>
+> * Vault - https://github.com/hashicorp/vault-helm
+> * Consul - https://github.com/hashicorp/consul-k8s/tree/main/charts/consul
+
+### 2.2.1. Download helm chart
+
+```shell
+helm repo add hashicorp https://helm.releases.hashicorp.com
+# "hashicorp" has been added to your repositories
+```
+
+
+
+### 2.2.2. Standalone Mode
+
+* `file` storage backend를 사용
+* 할당된 file storage에 비밀을 보관하므로 단독 서버만 접근 및 사용이 가능하다. 
+
+
+
+### 2.2.3. HA Mode
+
+* `Consul` storage backend를 사용
+* 공유된 하나의 storage backend를 사용한다.
+
+#### YAML Example
+
+```yaml
+server:
+  ha:
+    enabled: true
+    replicas: 3
+```
+
+
+
+
+
+### 2.2.4. External mode
+
+> https://developer.hashicorp.com/vault/tutorials/kubernetes/kubernetes-external-vault
+
+* Kubernetes Cluster 외부에 있는 Vault를 사용하여 구성
+
+
+
+## 2.3. Hashi Cloud
+
+
 
 
 
@@ -64,13 +114,29 @@ CNCF 선정 Secrets Managements 부분 1위 선정 [(링크)](https://radar.cncf
 
 ## 3.1. Seal && Unseal
 
-* Seal
-    * 서버가 시작 또는 재시작 한 경우 **Sealed** 상태
-        * KMS 세팅을 한 경우 바로 **Unseal** 됨
-    * 암호화된 비밀들을 복호화할 수 없는 상태
-* Unseal
-    * Seal 상태에서 설정된 임계값 이상의 unseal key를 입력하여 해제한 상태
-    * 정상적인 이용이 가능
+### 3.1.1. Seal
+
+* 서버가 시작 또는 재시작 한 경우 **Sealed** 상태
+    * KMS 세팅을 한 경우 바로 **Unseal** 됨
+* 암호화된 비밀들을 복호화할 수 없는 상태
+
+### 3.1.2. Unseal
+
+* `Seal` 상태에서 설정된 임계값 이상의 `unseal key`를 입력하여 해제한 상태
+* 정상적인 이용이 가능
+
+### 3.1.3. Auto Unseal
+
+> [공식 문서](https://developer.hashicorp.com/vault/tutorials/auto-unseal?optInFrom=learn)
+
+* 서버가 `Seal` 상태일 때, 외부 키(KMS, ...)를 이용하여 자동으로 `unseal`하는 기능
+* `Auto Unseal`이 활성화된 상태일 경우, `init`후 `unseal key` 대신 `Recovery Key`가 제공된다.  
+* 지원 목록
+  * Azure Key Vault
+  * GCP Cloud KMS
+  * AWS KMS
+
+
 
 ## 3.2. AuthMethod
 
@@ -462,7 +528,68 @@ Unseal Progress: 0
 
 
 
+
+
 # 5. HVAC (Python Package)
+
+
+
+
+
+# 6. Advance
+
+## 6.1. Auto Unseal 설정하기
+
+> Auto Unseal의 경우, Vault init을 하기 전에 설정하여야 한다.
+
+### 6.1.1. AWS
+
+> https://developer.hashicorp.com/vault/docs/configuration/seal/awskms
+
+1. IAM User 발급
+
+   1. Vault 에서 사용할 IAM 사용자를 발급한다. 
+   2. 별도의 권한은 설정할 필요 없다. 
+
+2. KMS 발급
+
+   1. 기존에 사용하던 KMS를 사용해도 되지만, 가급적 Vault 전용 KMS를 발급한다. 
+   2. Terraform을 사용중이더라도, 만일의 사태를 대비하여 수동으로 발급하자!
+   3. 키 사용자에 1번에서 발급한 `user`를 추가한다.
+
+3. helm chart 변경 
+
+   1. `endpoint`가 설정되지 않으면 `region`의 `default API endpoint`를 사용한다. 
+   2. 다른 Region의 KMS를 사용하는 것이 아니라면 `endpoint`는 설정할 필요가 없다. 
+
+   ```yaml
+   # Example
+   server:
+     extraEnvironmentVars:
+       VAULT_SEAL_TYPE: "awskms"
+     ha:
+       enabled: true
+       replicas: 3
+       config: |
+         ui = true
+   
+         listener "tcp" {
+           tls_disable = 1
+           address = "[::]:8200"
+           cluster_address = "[::]:8201"
+         }
+         storage "consul" {
+           path = "vault"
+           address = "HOST_IP:8500"
+         }
+         service_registration "kubernetes" {}
+         seal "awskms" {
+           region     = "REGION"
+           access_key = "ACCESS_KEY"
+           secret_key = "SECRET_KEY"
+           kms_key_id = "KMS_KEY_ID"
+         }
+   ```
 
 
 
