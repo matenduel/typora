@@ -334,6 +334,12 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
 
 
 
+## 5.3. timeout?
+
+
+
+
+
 # 6. CLI
 
 > bitnamin/kafka → `opt/bitnami/kafka/bin/`
@@ -426,7 +432,7 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 
-# 7. Connector
+# 7. Kafka Connect
 
 ![img](https://blog.kakaocdn.net/dn/cF4X3U/btrhVsFQhBK/uMAETh8q7SIPKPBdVjcfz0/img.png)
 
@@ -463,23 +469,33 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 
-
-
-# 8. Kafka Streams
-
-
-
-
-
-# 9. KSQL
+# 8. Schema Registry
 
 
 
 
 
+# 9. Kafka Streams
 
 
-# 10. Monitoring
+
+
+
+# 10. KSQL DB
+
+
+
+
+
+
+
+# 11. Monitoring & Dashboard
+
+## 11.1. Prometheus & grafana
+
+
+
+## 11.2. UI for Kafka
 
 
 
@@ -496,6 +512,14 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 1. Telepresence를 사용하여 Cluster에 연결
     1. [Telepresence 설치 및 사용법](https://balaan-dev.atlassian.net/wiki/spaces/DDAT/pages/289472556) 
 2. Internal LB 주소를 사용하여 테스트 
+
+
+
+
+
+# Trouble Shooting
+
+
 
 
 
