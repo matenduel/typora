@@ -182,17 +182,11 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
 
 
 
-### 3.10. Offset
-
 ## 3.10. Offset
 
 파티션내 각 메세지의 저장된 상대적 위치를 의미한다. 
 
 새로운 메세지가 발행되는 경우 파티션의 맨 뒤에 추가되며, `Consumer`는 `Offset`을 기준으로 마지막 커밋 시점부터 순서대로 처리한다. 
-
-
-
-
 
 
 
@@ -300,6 +294,71 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
 
 
 
+## ACKS
+
+- 0
+  - 프로듀서가 어떤 acks 응답도 기다리지 않는다. 즉, 카프카 서버가 데이터를 받았는지를 보장하지 않았으므로 전송 (요청) 실패에 따른 재요청도 없다.
+- 1
+  - 리더 노드가 메시지 발행 요청을 받은 건 확인하지만, 팔로워 노드가 그걸 복제해갔는지에 대해선 확인하지 않는다. 속도와 안정성 측면에서 가장 많이 쓰인다고 한다.
+- -1 (all)
+  - 리더 노드 뿐만 아니라 모든 팔로워 노드들의 응답을 기다리므로 데이터가 손실되지 않는다.
+
+## max.in.flight.requests.per.connection
+
+The maximum number of unacknowledged requests the client will send on a single connection before blocking.
+
+- 프로듀서가 입력하는 데이터의 최소 단위는 `batch.size` 에 지정한 값이 되는데, 이 옵션으로는 발행될 이벤트에 대한 batch 단위의 순서를 보장할 수 있다. (물론 1개 파티션 내에서의 이야기가 되겠다.)
+- 예를 들어, 2개의 batch 레코드 셋이 1개 파티션으로 발행 요청된 상황이 있다고 가정해보자. 이 상황에서 첫번째에 발행된 레코드 셋은 요청에 실패하여 retry 를 시도하고 있지만, 두번째 발행된 레코드 셋은 곧바로 성공하였다.
+- 주어진 상황에서 **`max.in.flight.requests.per.connection` 이 1 보다 큰 값으로 설정**되어 있다면, 두번째 batch 레코드셋이 먼저 발행에 성공할 수 있게 된다.
+- **`max.in.flight.requests.per.connection` 을 1 로 설정**한다면, 두번째 레코드셋은 첫번째에서 retry 를 성공할 때까지 발행 요청을 진행하지 않으므로, 파티션 내에서 프로듀서가 이벤트 발행을 요청한 순서를 보장한다. 다만 개인적으로는, 이렇게 되면 flexible 한 가용성을 충족시켜주진 못할 것 같다.
+
+## connections_max_idle_ms
+
+The idle socket timeout is reset on poll and heartbeat connections and could be considered an upper bound for any protocol request
+
+https://stackoverflow.com/questions/71208769/difference-between-connections-max-idle-ms-and-max-poll-interval-ms-in-kafka-con
+
+It's per *partition*. Kafka internally might multiplex connections (e.g. to send several requests using a single connect for different topics/partitions that are handled by the same broker), or have an individual connection per partition, but these are performance concerns which are *mostly* dealt within the client.
+
+The documentation of `retries`, sheds some more light (and clarifies that is per partition)
+
+> Setting a value greater than zero will cause the client to resend any record whose send fails with a potentially transient error. Note that this retry is no different than if the client resent the record upon receiving the error. Allowing retries without setting max.in.flight.requests.per.connection to 1 will potentially change the ordering of records because if two batches are sent to a single partition, and the first fails and is retried but the second succeeds, then the records in the second batch may appear first. Note additionally that produce requests will be failed before the number of retries has been exhausted if the timeout configured by [delivery.timeout.ms](http://delivery.timeout.ms) expires first before successful acknowledgement. Users should generally prefer to leave this config unset and instead use [delivery.timeout.ms](http://delivery.timeout.ms) to control retry behavior.
+
+## heartbeat_interval_ms
+
+- 그룹 코디네이터에게 얼마나 자주 KafkaConsumer poll() 메소드로 하트비트를 보낼것인지 조정
+- session.timeout.ms보다 낮아야 하고 일반적으론 1/3 정도로 설정
+- Python에서 메세지를 처리하는 중에도 별도의 Thread?를 통해서 heartbeat 체크를 진행함
+
+## session_timeout_ms
+
+- 카프카 브로커가 컨슈머에게 장애가 생겼다고 판단하는데 걸리는 시간
+- 컨슈머는 주기적으로 그룹 코디네이터에게 하트비트를 전송해 자신이 살아있음을 알림
+- 컨슈머가 그룹 코디네이터에게 하트비트를 보내지 않고 session.timeout.ms가 지나면 리밸런싱
+- 값이 작은 경우 이상상황 빠르게 감지. 불필요한 리밸런싱이 자주 발생
+
+## request_timeout_ms
+
+• 요청에 대해 응답을 기다리는 최대 시간
+
+## max_poll_interval_ms
+
+![Poll_interval](Kafka.assets/Poll_interval.png)
+
+- 컨슈머는 실제 데이터 polling 을 진행하고 있지 않을 때에도 컨슈머 그룹 멤버로서 지속적으로 존재하기 위해 **카프카 클러스터 (coordinator) 에게 heartbeat request 를 전송**한다.
+- 하지만 컨슈머 클라이언트가 클러스터에 heartbeat 는 보내지만 실제 데이터는 읽어가지 않는 상황이 길어질 경우, **파티션이 무한정으로 점유**될 수 있다.
+- **이 같은 상황을 방지하기 위해 이 설정을 추가**하여, 해당 값 (시간) 이 만료될 때 까지 message polling 을 시도하지 않는다면 컨슈머 그룹 구성에 변화가 생겼음 (해당 컨슈머가 장애라고 판단하고 그룹에서 제외시킬 수 있다) 을 인지할 수 있도록 한다.
+
+## consumer_timeout_ms
+
+## max_poll_records
+
+- 컨슈머 클라이언트가 특정 토픽을 구독한 뒤부터 poll 작업이 이루어질 수 있는데, 이 때 **`poll()` 한 번에 따라 가져올 수 있는 최대 레코드 수**를 지정한다.
+- 이 때 카프카를 사용하는 애플리케이션에서는 `poll` 메소드를 호출해서 레코드를 가져오고, 특정 스레드에서 그걸 전부 처리해준 뒤 다시 `poll` 메소드를 호출해 새로운 레코드를 가져오게 된다.
+- 이 속성의 기본값은 `500`이므로, 기본 값을 사용하는 경우 poll 메소드로 한번에 최대 `500개 레코드`까지 가져올 수 있다.
+
+
+
 # 5. Body
 
 ## 5.1. batching
@@ -328,15 +387,49 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
 
 
 
-## 5.2. request quota
+## 5.2. HeartBeat
+
+![HeartBeat](Kafka.assets/HeartBeat.png)
+
+heartbeat와 poll은 서로 다른쓰레드에서 동작한다.  [KIP-62](https://cwiki.apache.org/confluence/display/KAFKA/KIP-62%3A+Allow+consumer+to+send+heartbeats+from+a+background+thread) 이전에는 poll이 호출되는경우 heartbeat가 호출됐다. 하지만 [KIP-62](https://cwiki.apache.org/confluence/display/KAFKA/KIP-62%3A+Allow+consumer+to+send+heartbeats+from+a+background+thread) 이후부턴 위 그림과 같이 heartbeat 쓰레드가 분리되어 poll에 더이상 영향을 받지 않게 되었다. 따라서 session.timeout.ms와 heartbeat.interval.ms는 긴밀한 관련이 있어서 보통 함께 고려하고, max.poll.interval.ms 옵션의 경우 poll에 관해서만 설정해준다.
 
 
 
+## 5.3. Timeout && Interval
+
+![Timeout_and_Interval_table](Kafka.assets/Timeout_and_Interval_table.png)
 
 
-## 5.3. timeout?
+
+## 5.4. Rebalancing && STW (stop the world)
+
+![kafka_rebalancing](Kafka.assets/kafka_rebalancing.png)
+
+전체적인 흐름은
+
+1. FindCoordinator Request: Consumer Coordinator 가 Join Group 요청을 보낼 Group Coordinator를 찾는다
+2. JoinGroup Request: Group의 정보와 Subscription 정보를 수집하고, 리더를 선출한다
+3. SyncGroup Request: 리더가 그룹내에 Consumer에게 Partition을 할당하고, Group Coordinator에게 해당 정보를 보낸다
+
+Kafka가 Rebalancing 되는 과정 중에서는 모든 Consuming( Data Fetching ) 작업이 멈춰지는
+
+**STW(Stop The World) 현상**이 이루어지게 된다
 
 
+
+## 5.5. request quota
+
+
+
+## Offset, Commit 관련
+
+### enable.auto.commit (default=true)
+
+- true일 경우 백그라운드로 주기적으로 오프셋을 커밋
+- true일 경우 편리하지만 데이터 누락이나 중복 처리가 발생할 수 있음
+- poll(), close() 메서드 호출시 자동 커밋 실행
+- [auto.commit.interval.ms](http://auto.commit.interval.ms): 자동 커밋 주기
+- false 일 경우 : commitSync() - 동기, commitAsync() - 비동기로 커밋해줘야한다
 
 
 
@@ -497,6 +590,45 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 ## 11.2. UI for Kafka
 
+### 11.2.1. Installation
+
+> Github: https://github.com/provectus/kafka-ui
+>
+> Docker Image: https://hub.docker.com/r/provectuslabs/kafka-ui
+>
+> Helm Chart: https://github.com/provectus/kafka-ui/tree/master/charts/kafka-ui
+
+```shell
+# Helm chart Example
+helm repo add kafka-ui https://provectus.github.io/kafka-ui
+helm install kafka-ui kafka-ui/kafka-ui --set envs.config.KAFKA_CLUSTERS_0_NAME=local --set envs.config.KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+```
+
+
+
+# 12. How to Use
+
+Library & Package
+
+| Language | Name            | Schema Registry | Difficulty | require |
+| -------- | --------------- | --------------- | ---------- | ------- |
+| Python   | kafka-python    | X               |            |         |
+| Python   | confluent-kafka | O               |            |         |
+| NodeJS   |                 |                 |            |         |
+|          |                 |                 |            |         |
+
+
+
+## 12.1. [Python] kafka-python
+
+
+
+## 12.2. [Python] confluent-kafka
+
+
+
+## 12.3. [NodeJS] 
+
 
 
 
@@ -506,6 +638,10 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 ## Production에 배포시 주의 사항
 
 * 보안
+* Auto Create
+* Storage Class
+* IOPS
+* Resource (CPU/RAM)
 
 ## Local Test 방법 (Kubernetes + Internal LB)
 
@@ -515,9 +651,15 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 
+## **Kafka Broker 설정 예제**
+
+https://data-engineer-tech.tistory.com/11
+
 
 
 # Trouble Shooting
+
+## Session Timeout && Max Polling Interval
 
 
 
@@ -528,4 +670,10 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 1. https://kafka.apache.org/31/documentation.html
 2. https://www.popit.kr/kafka-%EC%9A%B4%EC%98%81%EC%9E%90%EA%B0%80-%EB%A7%90%ED%95%98%EB%8A%94-topic-replication/
 3. https://www.tibco.com/ko/reference-center/what-is-apache-kafka
-4. 
+4. https://stackoverflow.com/questions/61207633/how-to-process-a-kafka-message-for-a-long-time-4-60-mins-without-auto-commit
+5. https://kafka.apache.org/20/documentation.html
+6. [중요] https://velog.io/@hyeondev/Apache-Kafka-의-기본-아키텍쳐
+7. [중요] https://rangerang.tistory.com/75
+8. https://sungjk.github.io/2021/01/10/kafka-consumer.html
+9. https://huisam.tistory.com/entry/kafka-consumer?category=849126
+10. https://d2.naver.com/helloworld/0974525
