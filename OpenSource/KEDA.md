@@ -109,6 +109,7 @@ triggers:
 - `lagThreshold`  - Optional
     - 해당 값을 기준으로 Scale 양을 조정한다. 
     - String 형식으로 기입해야한다!
+    - `gt - Greater than`으로 파악되므로 주의!
 - `activationLagThreshold`  - Optional
     - 해당 값을 기준으로 Scale to Zero 여부를 결정한다. (gte 로 추정됨)
     - threshold보다 높은 값을 기입할 경우, Metric 값이 `activationThreshold` 보다 낮다면 서버가 시작하지 않으므로 주의할 것
