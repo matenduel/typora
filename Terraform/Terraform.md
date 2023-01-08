@@ -443,9 +443,51 @@ development
 
 
 
+# 5. Expressions (문법?)
+
+> https://developer.hashicorp.com/terraform/language/expressions
+
+
+
+## Operators
+
+
+
+## Function calls
+
+
+
+## Conditional Expressions
+
+
+
+## For Expressions
+
+
+
+## Splat Expressions
+
+
+
+## Dynamic Blocks
+
+
+
+## Custom Condition Checks
+
+
+
+## Type Constraints
+
+
+
+## Version Constraints
+
 
 
 # 5. Terraform Backend
+
+> https://developer.hashicorp.com/terraform/language/settings/backends/configuration
 
 Terraform “[Backend](https://www.terraform.io/docs/backends/index.html)” 는 Terraform의 state file을 어디에 저장을 하고, 가져올지에 대한 설정입니다. 기본적으로는는 로컬 스토리지에 저장을 하지만, 설정에 따라서 s3, consul, etcd 등 다양한 “[Backend type](https://www.terraform.io/docs/backends/types/index.html)“을 사용할 수 있습니다.
 
@@ -480,27 +522,128 @@ terraform {
 
 
 
-# 6. Functtion
 
 
+# 6. Resource
 
-#### Functions
+> *Resources* are the most important element in the Terraform language. Each resource block describes one or more infrastructure objects, such as virtual networks, compute instances, or higher-level components such as DNS records.
+>
+> https://developer.hashicorp.com/terraform/language/resources
 
-- Numeric functions
-- String functions
-- Collection functions
-- Encoding functions
-- Filesystem functions
-- Date and Time functions
-- Hash and Crypto functions
-- IP Network functions
-- Type Conversion Functions
+## 6.1. Meta-Arguments
 
+### 6.1.1. depends_on
 
+> **Note:** Module support for `depends_on` was added in Terraform version 0.13, and prior versions can only use it with resources.
 
-## 6.1. Count
+### 6.1.2. count
+
+> **Version note:** Module support for `count` was added in Terraform 0.13, and previous versions can only use it with resources.
 
 기본적으로 모든 리소스가 가지고 있는 count 파라미터를 이용하 반복되는 리소스를 간단하게 생성할 수 있습니다. count 에 부여한 숫자만큼, 리소스는 반복되어 생성되고 자동으로 테라폼내에서 resource_name[0] 처럼 리스트화 됩니다.
+
+### 6.1.3. for_each
+
+> **Version note:** `for_each` was added in Terraform 0.12.6. Module support for `for_each` was added in Terraform 0.13; previous versions can only use it with resources.
+
+### 6.1.4. provider
+
+```
+# default configuration
+provider "google" {
+  region = "us-central1"
+}
+
+# alternate configuration, whose alias is "europe"
+provider "google" {
+  alias  = "europe"
+  region = "europe-west1"
+}
+
+resource "google_compute_instance" "example" {
+  # This "provider" meta-argument selects the google provider
+  # configuration whose alias is "europe", rather than the
+  # default configuration.
+  provider = google.europe
+
+  # ...
+}
+```
+
+
+
+### 6.1.5. lifecycle
+
+The [Resource Behavior](https://developer.hashicorp.com/terraform/language/resources/behavior) page describes the general lifecycle for resources. Some details of that behavior can be customized using the special nested `lifecycle` block within a resource block body:
+
+```
+resource "azurerm_resource_group" "example" {
+  # ...
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+```
+
+`lifecycle` is a nested block that can appear within a resource block. The `lifecycle` block and its contents are meta-arguments, available for all `resource` blocks regardless of type.
+
+#### Syntax & Arguments
+
+* create_before_destroy
+* prevent_destroy
+* ignore_changes
+* replace_triggered_by
+
+
+
+
+
+#### Custom Condition Checks
+
+```
+resource "aws_instance" "example" {
+  instance_type = "t2.micro"
+  ami           = "ami-abc123"
+
+  lifecycle {
+    # The AMI ID must refer to an AMI that contains an operating system
+    # for the `x86_64` architecture.
+    precondition {
+      condition     = data.aws_ami.example.architecture == "x86_64"
+      error_message = "The selected AMI must be for the x86_64 architecture."
+    }
+  }
+}
+```
+
+## Resource Behavior
+
+
+
+## Provisioners -> TODO
+
+> https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax
+
+```
+resource "aws_instance" "web" {
+  # ...
+
+  provisioner "file" {
+    source      = "script.sh"
+    destination = "/tmp/script.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/script.sh",
+      "/tmp/script.sh args",
+    ]
+  }
+}
+```
+
+
 
 
 
@@ -517,6 +660,124 @@ Terraform에서 Import는 Terrafomr을 통해서 생성된 Resource가 아니라
 
 
 ## 7.2. 사용 예시
+
+
+
+# 6. Functions
+
+> d
+
+Count, For each와 같은 문법은 -> Resource.meta-argument로 가세요 
+
+## 6.1. Numeric
+
+
+
+## 6.2. String
+
+
+
+## 6.3. Collection
+
+
+
+## 6.4. Encoding
+
+
+
+## 6.5. Filesystem
+
+
+
+## 6.6. Data & Time
+
+
+
+## 6.7. Hash & Ctypto
+
+
+
+## 6.8. IP Network
+
+### 6.8.1. cidrhost
+
+### 6.8.2. cidrnetmask
+
+### 6.8.3. cidrsubnet
+
+`cidrsubnet` calculates a subnet address within given IP network address prefix.
+
+```
+cidrsubnet(prefix, newbits, netnum)
+```
+
+`prefix` must be given in CIDR notation, as defined in [RFC 4632 section 3.1](https://tools.ietf.org/html/rfc4632#section-3.1).
+
+`newbits` is the number of additional bits with which to extend the prefix. For example, if given a prefix ending in `/16` and a `newbits` value of `4`, the resulting subnet address will have length `/20`.
+
+`netnum` is a whole number that can be represented as a binary integer with no more than `newbits` binary digits, which will be used to populate the additional bits added to the prefix.
+
+
+
+#### Example
+
+```
+> cidrsubnet("172.16.0.0/12", 4, 2)
+172.18.0.0/16
+> cidrsubnet("10.1.2.0/24", 4, 15)
+10.1.2.240/28
+> cidrsubnet("fd00:fd12:3456:7890::/56", 16, 162)
+fd00:fd12:3456:7800:a200::/72
+```
+
+
+
+### 6.8.4. sidrsubnets
+
+`cidrsubnets` calculates a sequence of consecutive IP address ranges within a particular CIDR prefix.
+
+```
+cidrsubnets(prefix, newbits...)
+```
+
+`prefix` must be given in CIDR notation, as defined in [RFC 4632 section 3.1](https://tools.ietf.org/html/rfc4632#section-3.1).
+
+The remaining arguments, indicated as `newbits` above, each specify the number of additional network prefix bits for one returned address range. The return value is therefore a list with one element per `newbits` argument, each a string containing an address range in CIDR notation.
+
+For more information on IP addressing concepts, see the documentation for the related function [`cidrsubnet`](https://developer.hashicorp.com/terraform/language/functions/cidrsubnet). `cidrsubnet` calculates a single subnet address within a prefix while allowing you to specify its subnet number, while `cidrsubnets` can calculate many at once, potentially of different sizes, and assigns subnet numbers automatically.
+
+When using this function to partition an address space as part of a network address plan, you must not change any of the existing arguments once network addresses have been assigned to real infrastructure, or else later address assignments will be invalidated. However, you *can* append new arguments to existing calls safely, as long as there is sufficient address space available.
+
+This function accepts both IPv6 and IPv4 prefixes, and the result always uses the same addressing scheme as the given prefix.
+
+#### Example
+
+```
+> cidrsubnets("10.1.0.0/16", 4, 4, 8, 4)
+[
+  "10.1.0.0/20",
+  "10.1.16.0/20",
+  "10.1.32.0/24",
+  "10.1.48.0/20",
+]
+
+> cidrsubnets("fd00:fd12:3456:7890::/56", 16, 16, 16, 32)
+[
+  "fd00:fd12:3456:7800::/72",
+  "fd00:fd12:3456:7800:100::/72",
+  "fd00:fd12:3456:7800:200::/72",
+  "fd00:fd12:3456:7800:300::/88",
+]
+
+```
+
+
+
+
+
+
+
+## 6.9. Type Conversion
 
 
 
@@ -574,4 +835,5 @@ resource "aws_instance" "foo" {
 # Reference
 
 1. https://developer.hashicorp.com/terraform/cli/commands
-2. https://ch4njun.tistory.com/181
+2. https://developer.hashicorp.com/terraform/language/resources/behavior
+3. https://ch4njun.tistory.com/181
