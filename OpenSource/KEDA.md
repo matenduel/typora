@@ -46,7 +46,7 @@
     helm repo update
     ```
 
-### 
+
 
 # 3. Scaler List
 
@@ -200,6 +200,6 @@ triggers:
 # 9. TIP & 주의사항
 
 - 여러개의 Trigger를 사용하는 경우 `AND`가 아니라 `OR`로 작동한다. 
-- Deployments를 Scaling하므로 Deployment 내에서 `replicas`가 2 이상인 경우 의도한 것 보다 더 많은 POD이 생성될 수 있다
-    - Deployment의 replicas가 3인 경우, 3의 배수로 증가함 (3, 6, 9, ...)
+- HPA를 통해 `Pod`이  AutoScaling되므로 Deployment의 `replicas`가 2 이상이더라도 Pod이 지정된 갯수만 큼 증가한다. 
+    - Deployments가 증가하는 것이 아니다!
 - 당연하게도 scaledObject의 이름은 Unique해야한다. 
