@@ -52,53 +52,487 @@ The core Terraform workflow consists of three stages:
 
 
 
-
 ## 1.3. 비교하기
 
 
-# 2. Installation
+
+
+# 2. 설치 방법
 
 ## 2.1. Homebrew
 
+```shell
+brew install terraform
+```
+
+현재 사용가능한 Terraform의 최신 버젼이 설치된다. 
+
+
+
 ## 2.2. tfenv
+
+```sh
+# tfenv 설치
+brew install tfenv
+
+# 설치가능한 테라폼 버전 목록 보기
+tfenv list-remote
+
+# terraform 설치
+tfenv use <Terraform_Version>
+```
+
+각 Project의 상황에 맞춰서 Terraform 버젼을 다르게 사용할 수 있다. 
+
+
+
+## 2.3. Shell Tab-completion
+
+```shell
+terraform -install-autocomplete
+```
 
 
 
 # 3. 용어 정리
 
-## tfstate
+## Initializing
 
-## provider
+새로운 Terraform 프로젝트나 기존의 Version Control(git, ...)에서 복사해온 Terraform을 실행하기 전 Provider, Module등을 다운로드하는 과정을 의미한다. 
 
-## resource
+
 
 ## workspace
 
-## variables
 
-## outputs
+
+## Module
+
+통적으로 활용할 수 있는 인프라 코드를 한 곳으로 모아서 정의하는 부분입니다. Module을 사용하면 변수만 바꿔서 동일한 리소스를 손쉽게 생성할 수 있다는 장점이 있습니다.
+
+
+
+## tfstate
+
+
+
+## provider
+
+Terraform으로 정의할 Infrastructure Provider를 의미합니다.
+
+
+
+```hcl
+provider "aws" {
+  alias = "balaan-vpc"
+  region  = var.balaan-vpc-region
+  shared_config_files = ["$HOME/.aws/config"]
+  shared_credentials_files = ["$HOME/.aws/credentials"]
+  profile = var.balaan-vpc-peer-profile
+}
+```
+
+
+
+## resource
+
+실제로 생성할 인프라 자원을 의미합니다
+
+
+
+```hcl
+resource "aws_vpc" "vpc-example" {
+  cidr_block = var.data-vpc-eks-cidr
+  enable_dns_support = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "VPC-${var.env-prefix}-EKS"
+    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
+  }
+}
+```
+
+
+
+
+
+## Variables 목록
+
+
+
+### Input variables
+
+input 변수는 사용자의 입력을 받을 수 있는 변수 입니다. input 변수를 정의 할때 default 필드가 존재하지 않는 경우, 사용자에게 직접 입력을 받는 프롬프트를 발생시켜서 값을 받을 수 있습니다. 예를 들어 string 타입의 변수를 사용자에게 입력받아야 하는 경우, 다음과 같이 variable을 정의할 수 있습니다.
+
+#### Example
+
+```go
+variable "env-prefix" {
+  description = "Run Environment (DEV-DATA | STAGE-DATA | PROD-DATA)"
+  default = "DEV-DATA"
+  type = string
+}
+```
+
+
+
+### data
+
+Data source는 이미 생성되어있는 리소스를 가져와서 변수로 저장할때 사용됩니다. 예를들어 아래 예시와 같이 원하는 filter값을 설정하여 ami정보를 가져올 수 있습니다.
+
+data 사용은 `data.<TYPE>.<NAME>.<ATTRIBUTE>` 과 같이 사용할 수 있습니다.
+
+#### Example
+
+```
+# Get caller identity
+data "aws_caller_identity" "balaan-vpc" {
+  provider = aws.balaan-vpc
+}
+
+# Find the latest available AMI that is tagged with Component = web
+data "aws_ami" "web" {
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+
+  filter {
+    name   = "tag:Component"
+    values = ["web"]
+  }
+
+  most_recent = true
+}
+
+# Use Data source
+resource "aws_instance" "web" {
+  ami           = data.aws_ami.web.id
+  instance_type = "t1.micro"
+}
+```
+
+
+
+
+
+### locals
+
+local 변수는 현재 실행 파일에서 사용되는 지역 변수 입니다. 주로 특정 값들을 연산하여 하나의 변수로 만들어야 할때 사용 됩니다. 아래와 같이 merge, concat, max 와 같은 함수를 사용하여 변수를 만들 수 있습니다.
+
+#### Example
+
+```hcl
+locals {
+    tags = merge(var.tags1, var.tags2)
+
+    instance_ids = concat(aws_instance.blue.*.id, aws_instance.green.*.id)
+
+    max_subnet_length = max(
+    length(var.public_subnets),
+    length(var.private_subnets)
+    )
+}
+```
+
+
+
+### outputs
+
+프라를 프로비저닝 한 후에 생성된 자원을 output 부분으로 뽑을 수 있습니다. Output으로 추출한 부분은 이후에 `remote state`에서 활용할 수 있습니다.
+
+output 변수는 terraform 수행 후 결과를 사용자에게 출력 해주는 변수 입니다. output 변수로 정의한 값은 외부로 노출 시켜주어 모듈간 리소스를 참고할 수 있도록 해줍니다.
+
+모듈A에서 만든 aws_vpc 정보를 모듈B에서 사용해야할때 모듈A에 output을 정의하면 해당 output 값이 state 파일에 기록이 되며 모듈B에서는 다음과 같이 값을 사용할 수 있습니다. `moodule.<MODULE NAME>.<OUTPUT NAME>`
+
+#### Example
+
+```hcl
+output "instance_ip_addr" {
+  value = aws_instance.server.private_ip
+}
+
+# TODO 참조 예시 
+```
+
+
+
+
+
+
+
+## Backend (Remote Backend)
+
+terraform의 상태를 저장할 공간을 지정하는 부분입니다. backend를 사용하면 현재 배포된 최신 상태를 외부에 저장하기 때문에 다른 사람과의 협업이 가능합니다. 가장 대표적으로는 AWS S3가 있습니다.
+
+remote state를 사용하면 VPC, IAM 등과 같은 공용 서비스를 다른 서비스에서 참조할 수 있습니다. tfstate파일(최신 테라폼 상태정보)이 저장되어 있는 backend 정보를 명시하면, terraform이 해당 backend에서 output 정보들을 가져옵니다.
+
+
 
 
 
 # 4. CLI 사용법
 
+### Options
+
+```tex
+# Global
+-chdir=DIR
+Switch to a different working directory before executing the given subcommand.
+
+# Local
+
+```
+
+
+
 ## 4.1. init
+
+> Prepare your working directory for other commands
+
+The `terraform init` command initializes a working directory containing Terraform configuration files. This is the first command that should be run after writing a new Terraform configuration or cloning an existing one from version control. It is safe to run this command multiple times.
+
+
+
+- 지정한 backend에 상태 저장을 위한 `.tfstate` 파일을 생성합니다. 여기에는 가장 마지막에 적용한 테라폼 내역이 저장됩니다.
+- init 작업을 완료하면, local에는 `.tfstate`에 정의된 내용을 담은 `.terraform` 파일이 생성됩니다.
+- 기존에 다른 개발자가 이미 `.tfstate`에 인프라를 정의해 놓은 것이 있다면, 다른 개발자는 init작업을 통해서 local에 sync를 맞출 수 있습니다.
+
+
+
+* 멱등성이 보장되므로 `Provider`나 `Configuration`이 수정된 것이 아니라면 여러번 `init`을 수행하더라도 동일한 상태를 보장한다. (Like pip install)
 
 
 
 ## 4.2. plan
 
+> Show changes required by the current configuration
+
+
+
+- 정의한 코드가 어떤 인프라를 만들게 되는지 미리 예측 결과를 보여줍니다. 단, plan을 한 내용에 에러가 없다고 하더라도, 실제 적용되었을 때는 에러가 발생할 수 있습니다.
+- **Plan 명령어는 어떠한 형상에도 변화를 주지 않습니다.**
+
 
 
 ## 4.3. apply
+
+> Create or update infrastructure
+
+- 실제로 인프라를 배포하기 위한 명령어입니다. apply를 완료하면, AWS 상에 실제로 해당 인프라가 생성되고 작업 결과가 backend의 `.tfstate` 파일에 저장됩니다.
+- 해당 결과는 local의 `.terraform` 파일에도 저장됩니다.
 
 
 
 ## 4.4. destroy
 
+> Destroy previously-created infrastructure
+
 
 
 ## 4.5. workspace 
+
+> Workspace management
+
+```shell 
+terraform workspace <subcommand> [options] [args]
+```
+
+### 4.5.1. list
+
+> The command will list all existing workspaces. The current workspace is indicated using an asterisk (`*`) marker.
+
+```shell
+terraform workspace list [DIR]
+
+# Example 
+$ terraform workspace list
+  default
+* development
+  jsmith-test
+```
+
+### 4.5.2. select
+
+> This command will select another workspace. The named workspace must already exist.
+
+```shell
+terraform workspace select NAME [DIR]
+
+# Example 
+$ terraform workspace select default
+Switched to workspace "default".
+```
+
+### 4.5.3. new
+
+> This command will create a new workspace with the given name. A workspace with this name must not already exist.
+
+```shell
+terraform workspace new [OPTIONS] NAME [DIR]
+
+# Example
+$ terraform workspace new -state=old.terraform.tfstate example
+Created and switched to workspace "example"!
+
+You're now on a new, empty workspace. Workspaces isolate their state,
+so if you run "terraform plan" Terraform will not see any existing state
+for this configuration.
+```
+
+### 4.5.4. delete
+
+> This command will delete the specified workspace.
+
+```shell
+terraform workspace delete [OPTIONS] NAME [DIR]
+
+# Example 
+$ terraform workspace delete example
+Deleted workspace "example".
+```
+
+### 4.5.5. show
+
+> The command will display the current workspace.
+
+```shell
+terraform workspace show
+
+# Example 
+$ terraform workspace show
+development
+```
+
+
+
+## 4.6. Provider
+
+> Show the providers required for this configuration
+
+
+
+## 4.7. refresh
+
+> Update the state to match remote systems
+
+
+
+## 4.8. output
+
+> Show output values from your root module
+
+
+
+## 4.9. import
+
+> Associate existing infrastructure with a Terraform resource
+
+- AWS 인프라에 배포된 리소스를 `terraform state`로 옮겨주는 작업입니다.
+- 이는 local의 .terraform에 해당 리소스의 상태 정보를 저장해주는 역할을 합니다. (절대 코드를 생성해주지 않습니다.)
+  - Apply 전까지는 backend에 저장되지 않습니다.
+  - Import 이후에 plan을 하면 로컬에 해당 코드가 없기 때문에 리소스가 삭제 또는 변경된다는 결과를 보여줍니다. 이 결과를 바탕으로 코드를 작성하실 수 있습니다.
+
+만약 기존에 인프라를 AWS에 배포한 상태에서 테라폼을 적용하고 싶으면 모든 리소스를 `terraform import`로 옮겨야 합니다. 번거로운 경우에는 처음부터 다시 작업해서 리소스를 올릴 수 있지만, 실제 서비스가 되는 인프라를 내리는 건 위험할 수 있습니다.
+
+
+
+## 4.10. graph
+
+> Generate a Graphviz graph of the steps in an operation
+
+
+
+
+
+# 5. Terraform Backend
+
+Terraform “[Backend](https://www.terraform.io/docs/backends/index.html)” 는 Terraform의 state file을 어디에 저장을 하고, 가져올지에 대한 설정입니다. 기본적으로는는 로컬 스토리지에 저장을 하지만, 설정에 따라서 s3, consul, etcd 등 다양한 “[Backend type](https://www.terraform.io/docs/backends/types/index.html)“을 사용할 수 있습니다.
+
+## 5.1. 사용 목적
+
+- **Locking**: 보통 Terraform 코드를 혼자 작성하지 않습니다. 인프라를 변경한다는 것은 굉장히 민감한 작업이 될 수 있습니다. 원격 저장소를 사용함으로써 동시에 같은 state를 접근하는 것을 막아 의도치 않은 변경을 방지할 수 있습니다.
+- **Backup**: 로컬 스토리지에 저장한다는건 유실할 수 있다는 가능성을 내포합니다. S3와 같은 원격저장소를 사용함으로써 state 파일의 유실을 방지합니다.
+
+
+
+## 5.2. 종류
+
+
+
+## 5.3. 장점 Vs. 단점
+
+
+
+## 5.4. 설정 방법
+
+```hcl
+terraform {
+    backend "s3" { # 강의는 
+      bucket         = "terraform-s3-bucket" # s3 bucket 이름
+      key            = "terraform/own-your-path/terraform.tfstate" # s3 내에서 저장되는 경로를 의미합니다.
+      region         = "ap-northeast-2"  
+      encrypt        = true
+      dynamodb_table = "terraform-lock"
+    }
+}
+```
+
+
+
+# 6. Functtion
+
+
+
+#### Functions
+
+- Numeric functions
+- String functions
+- Collection functions
+- Encoding functions
+- Filesystem functions
+- Date and Time functions
+- Hash and Crypto functions
+- IP Network functions
+- Type Conversion Functions
+
+
+
+## 6.1. Count
+
+기본적으로 모든 리소스가 가지고 있는 count 파라미터를 이용하 반복되는 리소스를 간단하게 생성할 수 있습니다. count 에 부여한 숫자만큼, 리소스는 반복되어 생성되고 자동으로 테라폼내에서 resource_name[0] 처럼 리스트화 됩니다.
+
+
+
+# 7. Import
+
+Terraform에서 Import는 Terrafomr을 통해서 생성된 Resource가 아니라 AWS Console을 통해서 직접 추가한 Resource나 다른 Terraform 환경에서 생성한 Resource를 가져오기 위해 제공되는 CLI 명령이다.
+
+사용하는 이유는 Terrafomr은 tfstate파일에 있는 Resource만 본다는 점 때문이다.
+
+
+
+## 7.1. 사용 목적
+
+
+
+## 7.2. 사용 예시
+
+
+
+
+
+# Example
+
+## AWS
+
+
+
+## GCP
+
+
+
+
 
 
 
@@ -137,3 +571,7 @@ resource "aws_instance" "foo" {
 
 
 
+# Reference
+
+1. https://developer.hashicorp.com/terraform/cli/commands
+2. https://ch4njun.tistory.com/181
