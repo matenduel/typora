@@ -164,7 +164,7 @@ resource "aws_vpc" "vpc-example" {
 
 input 변수는 사용자의 입력을 받을 수 있는 변수 입니다. input 변수를 정의 할때 default 필드가 존재하지 않는 경우, 사용자에게 직접 입력을 받는 프롬프트를 발생시켜서 값을 받을 수 있습니다. 예를 들어 string 타입의 변수를 사용자에게 입력받아야 하는 경우, 다음과 같이 variable을 정의할 수 있습니다.
 
-#### Example
+**Example**
 
 ```go
 variable "env-prefix" {
@@ -173,6 +173,26 @@ variable "env-prefix" {
   type = string
 }
 ```
+
+#### Validation
+
+> **Note:** Input variable validation is available in Terraform v0.13.0 and later.
+>
+> https://developer.hashicorp.com/terraform/language/expressions/custom-conditions#input-variable-validation
+
+```
+variable "image_id" {
+  type        = string
+  description = "The id of the machine image (AMI) to use for the server."
+
+  validation {
+    condition     = length(var.image_id) > 4 && substr(var.image_id, 0, 4) == "ami-"
+    error_message = "The image_id value must be a valid AMI id, starting with \"ami-\"."
+  }
+}
+```
+
+
 
 
 
@@ -451,6 +471,51 @@ development
 
 ## Operators
 
+### Arithmetic Operators
+
+The arithmetic operators all expect number values and produce number values as results:
+
+- [`a + b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b) returns the result of adding `a` and `b` together.
+- [`a - b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-1) returns the result of subtracting `b` from `a`.
+- [`a * b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-2) returns the result of multiplying `a` and `b`.
+- [`a / b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-3) returns the result of dividing `a` by `b`.
+- [`a % b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-4) returns the remainder of dividing `a` by `b`. This operator is generally useful only when used with whole numbers.
+- [`-a`](https://developer.hashicorp.com/terraform/language/expressions/operators#a) returns the result of multiplying `a` by `-1`.
+
+Terraform supports some other less-common numeric operations as [functions](https://developer.hashicorp.com/terraform/language/expressions/function-calls). For example, you can calculate exponents using [the `pow` function](https://developer.hashicorp.com/terraform/language/functions/pow).
+
+### Equality Operators
+
+The equality operators both take two values of any type and produce boolean values as results.
+
+- [`a == b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-5) returns `true` if `a` and `b` both have the same type and the same value, or `false` otherwise.
+- [`a != b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-6) is the opposite of `a == b`.
+
+Because the equality operators require both arguments to be of exactly the same type in order to decide equality, we recommend using these operators only with values of primitive types or using explicit type conversion functions to indicate which type you are intending to use for comparison.
+
+Comparisons between structural types may produce surprising results if you are not sure about the types of each of the arguments. For example, `var.list == []` may seem like it would return `true` if `var.list` were an empty list, but `[]` actually builds a value of type `tuple([])` and so the two values can never match. In this situation it's often clearer to write `length(var.list) == 0` instead.
+
+### Comparison Operators
+
+The comparison operators all expect number values and produce boolean values as results.
+
+- [`a < b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-7) returns `true` if `a` is less than `b`, or `false` otherwise.
+- [`a <= b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-8) returns `true` if `a` is less than or equal to `b`, or `false` otherwise.
+- [`a > b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-9) returns `true` if `a` is greater than `b`, or `false` otherwise.
+- [`a >= b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-10) returns `true` if `a` is greater than or equal to `b`, or `false` otherwise.
+
+### Logical Operators
+
+The logical operators all expect bool values and produce bool values as results.
+
+- [`a || b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-11) returns `true` if either `a` or `b` is `true`, or `false` if both are `false`.
+- [`a && b`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-b-12) returns `true` if both `a` and `b` are `true`, or `false` if either one is `false`.
+- [`!a`](https://developer.hashicorp.com/terraform/language/expressions/operators#a-1) returns `true` if `a` is `false`, and `false` if `a` is `true`.
+
+Terraform does not have an operator for the "exclusive OR" operation. If you know that both operators are boolean values then exclusive OR is equivalent to the `!=` ("not equal") operator.
+
+The logical operators in Terraform do not short-circuit, meaning `var.foo || var.foo.bar` will produce an error message if `var.foo` is `null` because both `var.foo` and `var.foo.bar` are evaluated.
+
 
 
 ## Function calls
@@ -458,6 +523,28 @@ development
 
 
 ## Conditional Expressions
+
+> A *conditional expression* uses the value of a boolean expression to select one of two values.
+
+**Syntax**
+
+```
+condition ? true_val : false_val
+```
+
+**Conditions**
+
+`condition`은 `boolean`  타입을 반환하며, 일반적으로 일치여부(`==`, `!=`), 비교(`<`, `>`, ...), 논리연산자(`&&`, `||`, ...) 등을 사용한다.  ->  Operators 참조 
+
+**Custom Condition Checks**
+
+You can create conditions that produce custom error messages for several types of objects in a configuration. For example, you can add a condition to an input variable that checks whether incoming image IDs are formatted properly.
+
+Custom conditions can help capture assumptions, helping future maintainers understand the configuration design and intent. They also return useful information about errors earlier and in context, helping consumers more easily diagnose issues in their configurations.
+
+Refer to [Custom Condition Checks](https://developer.hashicorp.com/terraform/language/expressions/custom-conditions#input-variable-validation) for details.
+
+
 
 
 
@@ -786,6 +873,12 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 # Example
 
 ## AWS
+
+### VPC & Subnet
+
+
+
+### EKS
 
 
 
