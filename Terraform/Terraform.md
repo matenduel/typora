@@ -868,6 +868,53 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 
 
+# Terraform Cloud 관련
+
+## Provider(VCS) 설정 방법 
+
+### Bitbucket
+
+
+
+## Workspace 관리 방법
+
+
+
+## Remote 화면?
+
+
+
+## 9.4. Terraform Cloud 사용시 여러개의 Workspace 사용하는 방법
+
+```
+terraform {
+  required_version = ">= 1.2.6"  # 사용할 Terraform 버젼
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.49.0"
+    }
+  }
+  cloud {
+    organization = "balaan-data-iac"
+
+    workspaces {
+      tags = ["test", "dev"]  # 모든걸 만족하는 workspace가 선택됨.
+    }
+  }
+}
+```
+
+![terraform_cloud_init](./Terraform.assets/terraform_cloud_init.png)
+
+
+
+
+
+
+
+
+
 
 
 # Example
@@ -882,7 +929,7 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 
 
-## GCP
+### GCP
 
 
 
@@ -922,6 +969,64 @@ resource "aws_instance" "foo" {
   # ...
 }
 ```
+
+## 9.2. Variables(tfvars, ...) 적용 순서
+
+> https://developer.hashicorp.com/terraform/cloud-docs/workspaces/variables#scope
+
+### 1. Command Line Argument Variables
+
+When using a CLI workflow, variables applied to a run with either `-var` or `-var-file` overwrite workspace-specific and variable set variables that have the same key.
+
+### 2. Local Environment Variables Prefixed with `TF_VAR_`
+
+When using a CLI workflow, local environment variables prefixed with `TF_VAR_` (e.g., `TF_VAR_replicas`) overwrite workspace-specific, variable set, and `.auto.tfvars` file variables that have the same key.
+
+### 3. Workspace-Specific Variables
+
+Workspace-specific variables always overwrite variables from variable sets that have the same key. Refer to [overwrite variables from variable sets](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/variables/managing-variables#overwrite-variable-sets) for details.
+
+### 4. Non-Global Variable Sets
+
+Non-global variables are only applied to a subset of workspaces in an organization.
+
+When non-global variable sets have conflicting variables, Terraform Cloud compares the variable set names and uses values from the variable set with lexical precedence. Terraform and Terraform Cloud operate on UTF-8 strings, and Terraform Cloud sorts variable set names based the on lexical order of Unicode code points.
+
+For example, if you apply `A_Variable_Set` and `B_Variable_Set` to the same workspace, Terraform Cloud will use any conflicting variables from `A_Variable_Set`. This will be the case regardless of which variable set has been edited most recently; Terraform Cloud only considers the lexical ordering of variable set names when determining precedence.
+
+### 5. Global Variable Sets
+
+Non-global variable sets always take precedence over global variable sets that are applied to all workspaces within an organization. Terraform does not allow global variable sets to contain variables with the same key, so they cannot conflict.
+
+### 6. `*.auto.tfvars` Variable Files
+
+Variables in the Terraform Cloud workspace and variables provided through the command line always overwrite variables with the same key from files ending in `.auto.tfvars`.
+
+### 7. `terraform.tfvars` Variable File
+
+Variables in the `.auto.tfvars` files take precedence over variables in the `terraform.tfvars` file.
+
+
+
+## 9.3. `*.auto.tfvars` Variable Files 관련
+
+`auto.tfvars`로 끝나는 파일의 경우 Workspace와 관계없이 모든 파일이 적용되므로 주의할 것
+
+Terraform also automatically loads a number of variable definitions files if they are present:
+
+- Files named exactly `terraform.tfvars` or `terraform.tfvars.json`.
+- Any files with names ending in `.auto.tfvars` or `.auto.tfvars.json`.
+
+
+
+## 9.4. cloud backend와 cloud block의 차이점
+
+결론: backend에서 설정하는 것은 과거의 유산
+https://developer.hashicorp.com/terraform/language/settings/backends/remote
+
+
+
+
 
 
 
