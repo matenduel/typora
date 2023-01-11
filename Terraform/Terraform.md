@@ -104,7 +104,27 @@ terraform -install-autocomplete
 
 ## workspace
 
+### Key Points
 
+- With Workspaces, we can set deploy different environment with same terraform configuration files.
+- To manage multiple distinct sets of infrastructure resources (e.g. multiple environments), we can use Workspaces.
+- Workspaces isolate Terraform state. It is a best practice to have separate state per environment. Workspaces are technically equivalent to renaming your state file.
+- Workspaces ensure that the environments are isolated and mirrored.
+- Workspaces are the successor to old Terraform Environments.
+
+Workspaces are convenient in a number of situations:
+
+- **Multiple Environments:** One common need in infrastructure management is to build multiple environments, with mostly the same setup but keeping a few variables different, like networking and sizing.
+  \1. Production
+  \2. Staging
+  \3. Development
+- **Multiple Regions/Locations:** Replicate infrastructure in multiple places for High Availability (HA) and Disaster Recovery (DR).
+  \1. us-east-1
+  \2. eu-west-2
+- **Multiple Accounts/Subscriptions:** Create infrastructure in multiple accounts.
+  \1. Cloud Account 1
+  \2. Cloud Account 2
+- **Testing and Research:** Quickly create a new infrastructure for temporary pilot testing, freely experiment or R&D purpose, and destroy it with single command.
 
 ## Module
 
@@ -113,6 +133,12 @@ terraform -install-autocomplete
 
 
 ## tfstate
+
+
+
+For Local state, Terraform stores the workspace states in a directory called `terraform.tfstate.d`. Within that, it creates a sub-directory for every workspace and sub-directories contain individual state files for the particular workspace. All state files are stored in `/.terraform.state.d/<workspacename>`. This directory should be treated similarly to local-only `terraform.tfstate.`
+
+For [Remote state](https://medium.com/devops-mojo/terraform-remote-states-overview-what-is-terraform-remote-state-storage-introduction-936223a0e9d0), the workspaces are stored directly in the configured [backend](https://www.terraform.io/docs/language/settings/backends/index.html). Usually, the workspaces are stored by appending the workspace name to the state path. To ensure that workspace names are stored correctly and safely in all backends, the name must be valid to use in a URL path segment without escaping.
 
 
 
@@ -868,6 +894,70 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 
 
+
+
+# Provider
+
+
+
+## Helm
+
+### Authentication
+
+The Helm provider can get its configuration in two ways:
+
+1. Explicitly by supplying attributes to the provider block. This includes:
+
+   - [Using a kubeconfig file](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#file-config)
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           config_path = "~/.kube/config"
+         }
+       }
+       ```
+
+   - [Supplying credentials](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#credentials-config)
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           host     = "https://cluster_endpoint:port"
+       
+           client_certificate     = file("~/.kube/client-cert.pem")
+           client_key             = file("~/.kube/client-key.pem")
+           cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
+         }
+       }
+       ```
+
+   - [Exec plugins](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#exec-plugins)
+
+     - Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           host                   = var.cluster_endpoint
+           cluster_ca_certificate = base64decode(var.cluster_ca_cert)
+           exec {
+             api_version = "client.authentication.k8s.io/v1beta1"
+             args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+             command     = "aws"
+           }
+         }
+       }
+       ```
+
+2. Implicitly through environment variables. This includes:
+
+   - [Using the in-cluster config](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#in-cluster-config)
+
+
+
+
+
 # Terraform Cloud 관련
 
 ## Provider(VCS) 설정 방법 
@@ -884,7 +974,7 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 
 
-## 9.4. Terraform Cloud 사용시 여러개의 Workspace 사용하는 방법
+## Terraform Cloud 사용시 여러개의 Workspace 사용하는 방법
 
 ```
 terraform {
@@ -909,9 +999,11 @@ terraform {
 
 
 
+## Helm 관련 버그 (Kubernetes authentication 관련)
 
+> https://github.com/hashicorp/terraform-provider-kubernetes/issues/1131
 
-
+현재 클러스터 생성시 Authentication에 실패하지만, 이후 재차 apply를 하는 경우 정상적으로 인증이 완료되는 버그가 존재함. -> depend on 사용해봐야함. 
 
 
 
@@ -929,7 +1021,51 @@ terraform {
 
 
 
-### GCP
+## GCP
+
+
+
+
+
+## Helm
+
+
+
+**Example**
+
+```
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+
+  # localhost registry with password protection
+  registry {
+    url = "oci://localhost:5000"
+    username = "username"
+    password = "password"
+  }
+
+  # private registry
+  registry {
+    url = "oci://private.registry"
+    username = "username"
+    password = "password"
+  }
+}
+
+resource "helm_release" "nginx_ingress" {
+  name       = "nginx-ingress-controller"
+
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "nginx-ingress-controller"
+
+  set {
+    name  = "service.type"
+    value = "ClusterIP"
+  }
+}
+```
 
 
 
