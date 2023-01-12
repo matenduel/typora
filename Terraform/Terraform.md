@@ -489,6 +489,151 @@ development
 
 
 
+## 4.11. state
+
+> Advanced state management
+
+```sh
+terraform state <subcommand> [options] [args]
+```
+
+### 4.11.1. list
+
+> The command is used to list resources within a [Terraform state](https://developer.hashicorp.com/terraform/language/state).
+
+```
+terraform state list [options] [address...]
+```
+
+#### Example: All Resources
+
+This example will list all resources, including modules:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+$ terraform state list
+aws_instance.foo
+aws_instance.bar[0]
+aws_instance.bar[1]
+module.elb.aws_elb.main
+```
+
+#### Example: Filtering by Resource
+
+This example will only list resources for the given name:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+$ terraform state list aws_instance.bar
+aws_instance.bar[0]
+aws_instance.bar[1]
+```
+
+#### Example: Filtering by Module
+
+This example will list resources in the given module and any submodules:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+$ terraform state list module.elb
+module.elb.aws_elb.main
+module.elb.module.secgroups.aws_security_group.sg
+```
+
+#### Example: Filtering by ID
+
+This example will only list the resource whose ID is specified on the command line. This is useful to find where in your configuration a specific resource is located.
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+$ terraform state list -id=sg-1234abcd
+module.elb.aws_security_group.sg
+```
+
+
+
+### 4.11.2. show
+
+>The command is used to show the attributes of a single resource in the [Terraform state](https://developer.hashicorp.com/terraform/language/state).
+
+```
+terraform state show [options] ADDRESS
+```
+
+#### Example: Show a Resource
+
+The example below shows a `packet_device` resource named `worker`:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+$ terraform state show 'packet_device.worker'
+# packet_device.worker:
+resource "packet_device" "worker" {
+    billing_cycle = "hourly"
+    created       = "2015-12-17T00:06:56Z"
+    facility      = "ewr1"
+    hostname      = "prod-xyz01"
+    id            = "6015bg2b-b8c4-4925-aad2-f0671d5d3b13"
+    locked        = false
+}
+```
+
+
+
+### 4.11.3. refresh
+
+
+
+### 4.11.4. taint
+
+
+
+### 4.11.5. untaint
+
+
+
+### 4.11.6. mv
+
+> https://developer.hashicorp.com/terraform/cli/commands/state/mv
+
+```
+terraform state mv [options] SOURCE DESTINATION
+```
+
+#### Example: Rename a Resource
+
+Renaming a resource means making a configuration change like the following:
+
+```diff
+-resource "packet_device" "worker" {
++resource "packet_device" "helper" {
+   # ...
+ }
+```
+
+Copy
+
+To tell Terraform that it should treat the new "helper" resource as a rename of the old "worker" resource, you can pair the above configuration change with the following command:
+
+```shell
+terraform state mv packet_device.worker packet_device.helper
+```
+
+### 4.11.7. rm
+
+
+
+### 4.11.8. replace-provider
+
+
+
+### 4.11.9. pull
+
+### 4.11.10. push
+
+### 4.11.11. force-unlock
+
+
+
+
+
+
+
 # 5. Expressions (문법?)
 
 > https://developer.hashicorp.com/terraform/language/expressions
