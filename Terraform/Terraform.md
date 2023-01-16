@@ -96,9 +96,54 @@ terraform -install-autocomplete
 
 # 3. 용어 정리
 
+## Working Directory 
+
+테라폼 `working directory`는 다음을 포함합니다. 
+
+1. 테라폼이 관리할 리소스(provider, ...)가 적혀있는 설정 파일
+   - A Terraform configuration describing resources Terraform should manage
+2. `.terraform` 디렉토리
+   1. 캐싱된 `provider plugins`과 `modules`
+   2. 현재 활성화된 [workspace](https://developer.hashicorp.com/terraform/cli/workspaces)의 기록(record)
+   3. 가장 마지막에 사용된 backend 설정 정보 (state migration시에 사용)
+3. State data
+   - Local Backend인 경우
+     - `terraform.tfstate` file (if the directory only uses the default workspace)
+     - `terraform.tfstate.d` directory (if the directory uses multiple workspaces)
+
+
+
 ## Initializing
 
-새로운 Terraform 프로젝트나 기존의 Version Control(git, ...)에서 복사해온 Terraform을 실행하기 전 Provider, Module등을 다운로드하는 과정을 의미한다. 
+`terraform init`을 통해서 terraform project(?)를 초기화 할 수 있습니다. 
+
+`terraform init`은 테라폼 설정파일(Terraform configuration files)을 포함하고 있는 `working directory`를 초기화(`init`)합니다. 기존의 설정 파일이 수정되었거나 Github과 같은 VCS에서 레포지토리를 클론 받은 경우, 제일 먼저 수행해야하는 명령어입니다. 
+
+초기화(`initializing`) 이후, 테라폼은 `.terraform/` 디렉토리를 생성하고 해당 디렉토리 내부에 `terraform.tfstate`를 생성합니다. 단, remote backend를 설정한 경우, 해당 Backend에 state파일을 생성합니다.  
+
+Multiple Workspaces를 지원하는 Backend에서는 `Workspace`별로 `tfstate` 파일을 관리할 수 있습니다. 예를들어, local backend의 경우 `terraform.tfstate.d`디렉토리 내부에 `Workspace`별로 폴더가 생성되어 저장됩니다. 
+
+```
+├── dev.tfvars
+├── main.tf
+├── prod.tfvars
+├── terraform.tfstate.d
+│   ├── dev
+│   │   └── terraform.tfstate
+│   └── prod
+│       └── terraform.tfstate
+└── variables.tf
+```
+
+
+
+**Summary**
+
+- 멱등성이 보장되므로 `Provider`나 `Configuration`이 수정된 것이 아니라면 여러번 `init`을 수행하더라도 동일한 상태를 보장합니다. (Like pip install)
+- `backend`를 설정하였다면 해당 `backend`에 state 저장을 위한 `.tfstate` 파일을 생성합니다.
+- `.terraform/` 디렉토리 내부에는 테라폼 CLI를 통해서 제공된 인증 정보도 포함되므로 `Git`에 커밋하지 않도록 `.gitignore`에 추가해야 합니다. 
+- init 작업을 완료하면 local에는 `.tfstate`에 정의된 내용을 담은 `.terraform` 파일이 생성됩니다.
+- 기존에 다른 개발자가 이미 `.tfstate`에 인프라를 정의해 놓은 것이 있다면, 다른 개발자는 init작업을 통해서 local에 sync를 맞출 수 있습니다. (확인필요)
 
 
 
@@ -132,13 +177,17 @@ Workspaces are convenient in a number of situations:
 
 
 
+
+
 ## tfstate
-
-
 
 For Local state, Terraform stores the workspace states in a directory called `terraform.tfstate.d`. Within that, it creates a sub-directory for every workspace and sub-directories contain individual state files for the particular workspace. All state files are stored in `/.terraform.state.d/<workspacename>`. This directory should be treated similarly to local-only `terraform.tfstate.`
 
 For [Remote state](https://medium.com/devops-mojo/terraform-remote-states-overview-what-is-terraform-remote-state-storage-introduction-936223a0e9d0), the workspaces are stored directly in the configured [backend](https://www.terraform.io/docs/language/settings/backends/index.html). Usually, the workspaces are stored by appending the workspace name to the state path. To ensure that workspace names are stored correctly and safely in all backends, the name must be valid to use in a URL path segment without escaping.
+
+**purpose**
+
+https://developer.hashicorp.com/terraform/language/state/purpose
 
 
 
@@ -319,15 +368,12 @@ remote state를 사용하면 VPC, IAM 등과 같은 공용 서비스를 다른 �
 
 # 4. CLI 사용법
 
-### Options
+**Options**
 
 ```tex
 # Global
 -chdir=DIR
 Switch to a different working directory before executing the given subcommand.
-
-# Local
-
 ```
 
 
@@ -336,17 +382,21 @@ Switch to a different working directory before executing the given subcommand.
 
 > Prepare your working directory for other commands
 
-The `terraform init` command initializes a working directory containing Terraform configuration files. This is the first command that should be run after writing a new Terraform configuration or cloning an existing one from version control. It is safe to run this command multiple times.
+```
+terraform init [options]
+```
 
 
 
-- 지정한 backend에 상태 저장을 위한 `.tfstate` 파일을 생성합니다. 여기에는 가장 마지막에 적용한 테라폼 내역이 저장됩니다.
-- init 작업을 완료하면, local에는 `.tfstate`에 정의된 내용을 담은 `.terraform` 파일이 생성됩니다.
-- 기존에 다른 개발자가 이미 `.tfstate`에 인프라를 정의해 놓은 것이 있다면, 다른 개발자는 init작업을 통해서 local에 sync를 맞출 수 있습니다.
+**General Options**
 
+> The following options apply to all of (or several of) the initialization steps
 
-
-* 멱등성이 보장되므로 `Provider`나 `Configuration`이 수정된 것이 아니라면 여러번 `init`을 수행하더라도 동일한 상태를 보장한다. (Like pip install)
+- [`-input=true`](https://developer.hashicorp.com/terraform/cli/commands/init#input-true) Ask for input if necessary. If false, will error if input was required.
+- [`-lock=false`](https://developer.hashicorp.com/terraform/cli/commands/init#lock-false) Disable locking of state files during state-related operations.
+- [`-lock-timeout=`](https://developer.hashicorp.com/terraform/cli/commands/init#lock-timeout) Override the time Terraform will wait to acquire a state lock. The default is `0s` (zero seconds), which causes immediate failure if the lock is already held by another process.
+- [`-no-color`](https://developer.hashicorp.com/terraform/cli/commands/init#no-color) Disable color codes in the command output.
+- [`-upgrade`](https://developer.hashicorp.com/terraform/cli/commands/init#upgrade) Opt to upgrade modules and plugins as part of their respective installation steps. See the sections below for more details.
 
 
 
@@ -354,10 +404,80 @@ The `terraform init` command initializes a working directory containing Terrafor
 
 > Show changes required by the current configuration
 
+```
+terraform plan [options]
+```
 
+
+
+- Reads the current state of any already-existing remote objects to make sure that the Terraform state is up-to-date.
+- Compares the current configuration to the prior state and noting any differences.
+- Proposes a set of change actions that should, if applied, make the remote objects match the configuration.
 
 - 정의한 코드가 어떤 인프라를 만들게 되는지 미리 예측 결과를 보여줍니다. 단, plan을 한 내용에 에러가 없다고 하더라도, 실제 적용되었을 때는 에러가 발생할 수 있습니다.
 - **Plan 명령어는 어떠한 형상에도 변화를 주지 않습니다.**
+
+
+
+**Options**
+
+- [`-var 'NAME=VALUE'`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-name-value) - Sets a value for a single [input variable](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration. Use this option multiple times to set more than one variable. Refer to [Input Variables on the Command Line](https://developer.hashicorp.com/terraform/cli/commands/plan#input-variables-on-the-command-line) for more information.
+
+- [`-var-file=FILENAME`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-file-filename) - Sets values for potentially many [input variables](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration, using definitions from a ["tfvars" file](https://developer.hashicorp.com/terraform/language/values/variables#variable-definitions-tfvars-files). Use this option multiple times to include values from more than one file.
+
+- [`-out=FILENAME`](https://developer.hashicorp.com/terraform/cli/commands/plan#out-filename) - Writes the generated plan to the given filename in an opaque file format that you can later pass to `terraform apply` to execute the planned changes, and to some other Terraform commands that can work with saved plan files.
+
+  Terraform will allow any filename for the plan file, but a typical convention is to name it `tfplan`. **Do not** name the file with a suffix that Terraform recognizes as another file format; if you use a `.tf` suffix then Terraform will try to interpret the file as a configuration source file, which will then cause syntax errors for subsequent commands.
+
+  The generated file is not in any standard format intended for consumption by other software, but the file *does* contain your full configuration, all of the values associated with planned changes, and all of the plan options including the input variables. If your plan includes any sort of sensitive data, even if obscured in Terraform's terminal output, it will be saved in cleartext in the plan file. You should therefore treat any saved plan files as potentially-sensitive artifacts.
+
+- [`-compact-warnings`](https://developer.hashicorp.com/terraform/cli/commands/plan#compact-warnings) - Shows any warning messages in a compact form which includes only the summary messages, unless the warnings are accompanied by at least one error and thus the warning text might be useful context for the errors.
+
+- 
+
+  [`-detailed-exitcode`](https://developer.hashicorp.com/terraform/cli/commands/plan#detailed-exitcode) - Returns a detailed exit code when the command exits. When provided, this argument changes the exit codes and their meanings to provide more granular information about what the resulting plan contains:
+
+  - 0 = Succeeded with empty diff (no changes)
+  - 1 = Error
+  - 2 = Succeeded with non-empty diff (changes present)
+
+- 
+
+  [`-input=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#input-false) - Disables Terraform's default behavior of prompting for input for root module input variables that have not otherwise been assigned a value. This option is particularly useful when running Terraform in non-interactive automation systems.
+
+- 
+
+  [`-json`](https://developer.hashicorp.com/terraform/cli/commands/plan#json) - Enables the [machine readable JSON UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui) output. This implies `-input=false`, so the configuration must have no unassigned variable values to continue.
+
+- 
+
+  [`-lock=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-false) - Don't hold a state lock during the operation. This is dangerous if others might concurrently run commands against the same workspace.
+
+- 
+
+  [`-lock-timeout=DURATION`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-timeout-duration) - Unless locking is disabled with `-lock=false`, instructs Terraform to retry acquiring a lock for a period of time before returning an error. The duration syntax is a number followed by a time unit letter, such as "3s" for three seconds.
+
+- 
+
+  [`-no-color`](https://developer.hashicorp.com/terraform/cli/commands/plan#no-color) - Disables terminal formatting sequences in the output. Use this if you are running Terraform in a context where its output will be rendered by a system that cannot interpret terminal formatting.
+
+
+
+**Example: Destroy Plan**
+
+```
+terraform plan -destroy
+```
+
+
+
+**Example: Refresh Only Plan**
+
+```
+terraform plan -refresh-only
+```
+
+
 
 
 
@@ -365,14 +485,35 @@ The `terraform init` command initializes a working directory containing Terrafor
 
 > Create or update infrastructure
 
+```
+terraform apply [options] [plan file]
+```
+
+
+
 - 실제로 인프라를 배포하기 위한 명령어입니다. apply를 완료하면, AWS 상에 실제로 해당 인프라가 생성되고 작업 결과가 backend의 `.tfstate` 파일에 저장됩니다.
 - 해당 결과는 local의 `.terraform` 파일에도 저장됩니다.
 
+**Options**
 
+- [`-var 'NAME=VALUE'`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-name-value) - Sets a value for a single [input variable](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration. Use this option multiple times to set more than one variable. Refer to [Input Variables on the Command Line](https://developer.hashicorp.com/terraform/cli/commands/plan#input-variables-on-the-command-line) for more information.
+- [`-var-file=FILENAME`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-file-filename) - Sets values for potentially many [input variables](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration, using definitions from a ["tfvars" file](https://developer.hashicorp.com/terraform/language/values/variables#variable-definitions-tfvars-files). Use this option multiple times to include values from more than one file.
 
 ## 4.4. destroy
 
 > Destroy previously-created infrastructure
+
+```
+terraform destroy [options]
+```
+
+The `terraform destroy` command is a convenient way to destroy all remote objects managed by a particular Terraform configuration.
+
+While you will typically not want to destroy long-lived objects in a production environment, Terraform is sometimes used to manage ephemeral infrastructure for development purposes, in which case you can use `terraform destroy` to conveniently clean up all of those temporary objects once you are finished with your work.
+
+
+
+
 
 
 
@@ -383,6 +524,14 @@ The `terraform init` command initializes a working directory containing Terrafor
 ```shell 
 terraform workspace <subcommand> [options] [args]
 ```
+
+### TODO네이밍 방법
+
+```
+<COMPONENT>-<ENVIRONMENT>-<REGION>
+```
+
+https://developer.hashicorp.com/terraform/cloud-docs/workspaces/naming
 
 ### 4.5.1. list
 
@@ -1113,6 +1262,15 @@ The Helm provider can get its configuration in two ways:
 
 ## Workspace 관리 방법
 
+https://developer.hashicorp.com/terraform/cloud-docs/workspaces
+
+| Component               | Local Terraform                                              | Terraform Cloud                                              |
+| :---------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| Terraform configuration | On disk                                                      | In linked version control repository, or periodically uploaded via API/CLI |
+| Variable values         | As `.tfvars` files, as CLI arguments, or in shell environment | In workspace                                                 |
+| State                   | On disk or in remote backend                                 | In workspace                                                 |
+| Credentials and secrets | In shell environment or entered at prompts                   | In workspace, stored as sensitive variables                  |
+
 
 
 ## Remote 화면?
@@ -1216,7 +1374,13 @@ resource "helm_release" "nginx_ingress" {
 
 
 
+# 고려사항(?)
 
+## Mono Repo Vs. Multi Repo
+
+https://www.hashicorp.com/blog/terraform-mono-repo-vs-multi-repo-the-great-debate
+
+https://www.youtube.com/watch?v=4Rlwh4YVLRY&ab_channel=HashiCorp
 
 
 
