@@ -1273,6 +1273,14 @@ https://developer.hashicorp.com/terraform/cloud-docs/workspaces
 
 
 
+##  Variables  종류
+
+- hcl Variables
+- Variables
+- Environment variables
+
+
+
 ## Remote 화면?
 
 
@@ -1471,7 +1479,20 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 
 
+## 9.5. Workspace별 코드 관리법
 
+1. Repository 구분
+   1. 장점
+   2. 단점
+2. Mono Repo + directory 구분
+   1. 장점
+   2. 단점
+3. Mono Repo + branch 구분 + directory 구분
+   1. 장점
+   2. 단점
+4. Mono Repo + Single Directory + Cloud Variable
+   1. 장점
+   2. 단점
 
 
 
