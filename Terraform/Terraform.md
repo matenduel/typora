@@ -115,8 +115,6 @@ terraform -install-autocomplete
 
 ## Initializing
 
-`terraform init`을 통해서 terraform project(?)를 초기화 할 수 있습니다. 
-
 `terraform init`은 테라폼 설정파일(Terraform configuration files)을 포함하고 있는 `working directory`를 초기화(`init`)합니다. 기존의 설정 파일이 수정되었거나 Github과 같은 VCS에서 레포지토리를 클론 받은 경우, 제일 먼저 수행해야하는 명령어입니다. 
 
 초기화(`initializing`) 이후, 테라폼은 `.terraform/` 디렉토리를 생성하고 해당 디렉토리 내부에 `terraform.tfstate`를 생성합니다. 단, remote backend를 설정한 경우, 해당 Backend에 state파일을 생성합니다.  
@@ -623,12 +621,65 @@ development
 
 > Associate existing infrastructure with a Terraform resource
 
-- AWS 인프라에 배포된 리소스를 `terraform state`로 옮겨주는 작업입니다.
-- 이는 local의 .terraform에 해당 리소스의 상태 정보를 저장해주는 역할을 합니다. (절대 코드를 생성해주지 않습니다.)
-  - Apply 전까지는 backend에 저장되지 않습니다.
-  - Import 이후에 plan을 하면 로컬에 해당 코드가 없기 때문에 리소스가 삭제 또는 변경된다는 결과를 보여줍니다. 이 결과를 바탕으로 코드를 작성하실 수 있습니다.
+```
+terraform import [options] ADDRESS ID
+```
 
-만약 기존에 인프라를 AWS에 배포한 상태에서 테라폼을 적용하고 싶으면 모든 리소스를 `terraform import`로 옮겨야 합니다. 번거로운 경우에는 처음부터 다시 작업해서 리소스를 올릴 수 있지만, 실제 서비스가 되는 인프라를 내리는 건 위험할 수 있습니다.
+`import`는 테라폼을 통해 전개하지 않은 기존의 Object(Resource)를 `terraform state`로 옮겨주는 작업입니다. 테라폼 코드를 자동으로 생성해주는 것이 아니므로, Resource를 사전 또는 사후에 코드로 작성하여야 합니다. 
+
+일반적으로 테라폼 도입 전에 전개된 인프라 또는 장애 대응과 같은 이유로 Console에서 작업한 내용을 Terraform으로 옮기는 경우에 많이 사용하게 됩니다.
+
+
+
+**Tip**
+
+* `terraform state show`를 통해서 `import`한 리소스의 tf 코드를 확인할 수 있습니다. 해당 코드를 기반으로 Terraform Resource를 작성하면 편합니다. 
+
+
+
+**주의사항**
+
+* Terraform Cloud 사용시 import 작업이 Cloud가 아닌 Local에서 이루어지므로 Terraform Cloud의 Variables를 사용할 수 없습니다. 따라서, Local에서 `var file`등의 형태로 별도로 variables를 제공하여야 합니다. 
+* `Remote object`는 꼭 하나의 Terraform Resource와 매칭되어야한다. 동일한 `object`를 여러번 Import하면 안됩니다. 
+
+
+
+**Example: 기존 ECR 레포지토리 Import하기**
+
+1. 빈 블럭 생성
+
+```
+resource "aws_ecr_repository" "ecr_repo" {
+
+}
+```
+
+2. `terraform import`를 사용해 state 가져오기
+
+```
+terraform import -var-file=local.tfvars aws_ecr_repository.ecr_repo <ECR_REPO_NAME>
+```
+
+3. `terraform state show`를 사용해 테라폼 코드 확인
+
+```
+terraform state show aws_ecr_repository.ecr_repo
+```
+
+4. 테라폼 코드 재작성
+
+```
+resource "aws_ecr_repository" "ecr_repo" {
+  name                 = <ECR_REPO_NAME>
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+```
+
+5. `terraform plan`을 통한 검증
 
 
 
@@ -1481,18 +1532,29 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 ## 9.5. Workspace별 코드 관리법
 
+1. 해당 방식은 어렵다. 되긴 하나 그 경우에는 해당 레포에 연결된 모든 워크스페이스가 트리거링 → 원하는 스테이지만 manual 하게 apply하고 나머지를 discard하는 식으로 운영 형태로 관리가 됨 (위험성 다분 및 관리 포인트 증가 인수인계 문제)
+2. 추천하는 방법은 디렉토리 단위 구분이나 브랜치로 구별하는 것이다. 그 중에서도 게임회사 예제를 드시면서 디렉토리 구분을 추천해주심. 브랜치로 하더라고 디렉토리 구분을 추천하심 그게 제일 안전하다고 하심.
+
 1. Repository 구분
-   1. 장점
-   2. 단점
+
+   - 장점
+
+   - 단점
+
 2. Mono Repo + directory 구분
-   1. 장점
-   2. 단점
+
+   - 장점
+   - 단점
+
 3. Mono Repo + branch 구분 + directory 구분
-   1. 장점
-   2. 단점
+
+   - 장점
+   - 단점
+
 4. Mono Repo + Single Directory + Cloud Variable
-   1. 장점
-   2. 단점
+
+   - 장점
+   - 단점
 
 
 
