@@ -209,9 +209,11 @@ provider "aws" {
 
 ## resource
 
-실제로 생성할 인프라 자원을 의미합니다
+일반적으로 실제로 생성할 인프라 자원을 의미하지만, `iam_policy_attachment`와 같이 행동도 `resource`로 정의된다. 
 
 
+
+**Example**
 
 ```hcl
 resource "aws_vpc" "vpc-example" {
@@ -231,8 +233,6 @@ resource "aws_vpc" "vpc-example" {
 
 ## Variables 목록
 
-
-
 ### Input variables
 
 input 변수는 사용자의 입력을 받을 수 있는 변수 입니다. input 변수를 정의 할때 default 필드가 존재하지 않는 경우, 사용자에게 직접 입력을 받는 프롬프트를 발생시켜서 값을 받을 수 있습니다. 예를 들어 string 타입의 변수를 사용자에게 입력받아야 하는 경우, 다음과 같이 variable을 정의할 수 있습니다.
@@ -247,7 +247,7 @@ variable "env-prefix" {
 }
 ```
 
-#### Validation
+**Validation**
 
 > **Note:** Input variable validation is available in Terraform v0.13.0 and later.
 >
@@ -275,7 +275,7 @@ Data source는 이미 생성되어있는 리소스를 가져와서 변수로 저
 
 data 사용은 `data.<TYPE>.<NAME>.<ATTRIBUTE>` 과 같이 사용할 수 있습니다.
 
-#### Example
+**Example**
 
 ```
 # Get caller identity
@@ -313,7 +313,7 @@ resource "aws_instance" "web" {
 
 local 변수는 현재 실행 파일에서 사용되는 지역 변수 입니다. 주로 특정 값들을 연산하여 하나의 변수로 만들어야 할때 사용 됩니다. 아래와 같이 merge, concat, max 와 같은 함수를 사용하여 변수를 만들 수 있습니다.
 
-#### Example
+**Example**
 
 ```hcl
 locals {
@@ -338,7 +338,7 @@ output 변수는 terraform 수행 후 결과를 사용자에게 출력 해주는
 
 모듈A에서 만든 aws_vpc 정보를 모듈B에서 사용해야할때 모듈A에 output을 정의하면 해당 output 값이 state 파일에 기록이 되며 모듈B에서는 다음과 같이 값을 사용할 수 있습니다. `moodule.<MODULE NAME>.<OUTPUT NAME>`
 
-#### Example
+**Example**
 
 ```hcl
 output "instance_ip_addr" {
@@ -347,10 +347,6 @@ output "instance_ip_addr" {
 
 # TODO 참조 예시 
 ```
-
-
-
-
 
 
 
@@ -658,12 +654,41 @@ resource "aws_ecr_repository" "ecr_repo" {
 
 ```
 terraform import -var-file=local.tfvars aws_ecr_repository.ecr_repo <ECR_REPO_NAME>
+
+# Output
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
 ```
 
 3. `terraform state show`를 사용해 테라폼 코드 확인
 
 ```
 terraform state show aws_ecr_repository.ecr_repo
+
+# Output
+# aws_ecr_repository.ecr_repo:
+resource "aws_ecr_repository" "ecr_repo" {
+    arn                  = "<ARN>"
+    id                   = "<ECR_REPO_NAME>"
+    image_tag_mutability = "MUTABLE"
+    name                 = "<ECR_REPO_NAME>"
+    registry_id          = "<value>"
+    repository_url       = "<url>"
+    tags                 = {}
+    tags_all             = {
+        "managed_by" = "terraform"
+    }
+
+    encryption_configuration {
+        encryption_type = "AES256"
+    }
+
+    image_scanning_configuration {
+        scan_on_push = true
+    }
+}
 ```
 
 4. 테라폼 코드 재작성
@@ -672,6 +697,10 @@ terraform state show aws_ecr_repository.ecr_repo
 resource "aws_ecr_repository" "ecr_repo" {
   name                 = <ECR_REPO_NAME>
   image_tag_mutability = "MUTABLE"
+  
+  encryption_configuration {
+  	encryption_type = "AES256"
+  }
 
   image_scanning_configuration {
     scan_on_push = true
@@ -795,23 +824,27 @@ resource "packet_device" "worker" {
 terraform state mv [options] SOURCE DESTINATION
 ```
 
-#### Example: Rename a Resource
+**Example: Rename a Resource**
 
 Renaming a resource means making a configuration change like the following:
 
 ```diff
--resource "packet_device" "worker" {
-+resource "packet_device" "helper" {
+-resource "kubernetes_config_map" "aws_auth" {
++resource "kubernetes_config_map" "data_eks_aws_auth" {
    # ...
  }
 ```
 
-Copy
-
 To tell Terraform that it should treat the new "helper" resource as a rename of the old "worker" resource, you can pair the above configuration change with the following command:
 
 ```shell
-terraform state mv packet_device.worker packet_device.helper
+terraform state mv kubernetes_config_map.aws_auth kubernetes_config_map.data_eks_aws_auth   
+
+# Output
+Acquiring state lock. This may take a few moments...
+Move "kubernetes_config_map.aws_auth" to "kubernetes_config_map.data_eks_aws_auth"
+Successfully moved 1 object(s).
+Releasing state lock. This may take a few moments...
 ```
 
 ### 4.11.7. rm
