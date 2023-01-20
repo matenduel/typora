@@ -195,6 +195,8 @@ Terraform으로 정의할 Infrastructure Provider를 의미합니다.
 
 
 
+**Example**
+
 ```hcl
 provider "aws" {
   alias = "balaan-vpc"
@@ -435,25 +437,15 @@ terraform plan [options]
   - 1 = Error
   - 2 = Succeeded with non-empty diff (changes present)
 
-- 
+- [`-input=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#input-false) - Disables Terraform's default behavior of prompting for input for root module input variables that have not otherwise been assigned a value. This option is particularly useful when running Terraform in non-interactive automation systems.
 
-  [`-input=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#input-false) - Disables Terraform's default behavior of prompting for input for root module input variables that have not otherwise been assigned a value. This option is particularly useful when running Terraform in non-interactive automation systems.
+- [`-json`](https://developer.hashicorp.com/terraform/cli/commands/plan#json) - Enables the [machine readable JSON UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui) output. This implies `-input=false`, so the configuration must have no unassigned variable values to continue.
 
-- 
+- [`-lock=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-false) - Don't hold a state lock during the operation. This is dangerous if others might concurrently run commands against the same workspace.
 
-  [`-json`](https://developer.hashicorp.com/terraform/cli/commands/plan#json) - Enables the [machine readable JSON UI](https://developer.hashicorp.com/terraform/internals/machine-readable-ui) output. This implies `-input=false`, so the configuration must have no unassigned variable values to continue.
+- [`-lock-timeout=DURATION`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-timeout-duration) - Unless locking is disabled with `-lock=false`, instructs Terraform to retry acquiring a lock for a period of time before returning an error. The duration syntax is a number followed by a time unit letter, such as "3s" for three seconds.
 
-- 
-
-  [`-lock=false`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-false) - Don't hold a state lock during the operation. This is dangerous if others might concurrently run commands against the same workspace.
-
-- 
-
-  [`-lock-timeout=DURATION`](https://developer.hashicorp.com/terraform/cli/commands/plan#lock-timeout-duration) - Unless locking is disabled with `-lock=false`, instructs Terraform to retry acquiring a lock for a period of time before returning an error. The duration syntax is a number followed by a time unit letter, such as "3s" for three seconds.
-
-- 
-
-  [`-no-color`](https://developer.hashicorp.com/terraform/cli/commands/plan#no-color) - Disables terminal formatting sequences in the output. Use this if you are running Terraform in a context where its output will be rendered by a system that cannot interpret terminal formatting.
+- [`-no-color`](https://developer.hashicorp.com/terraform/cli/commands/plan#no-color) - Disables terminal formatting sequences in the output. Use this if you are running Terraform in a context where its output will be rendered by a system that cannot interpret terminal formatting.
 
 
 
@@ -492,6 +484,8 @@ terraform apply [options] [plan file]
 
 - [`-var 'NAME=VALUE'`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-name-value) - Sets a value for a single [input variable](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration. Use this option multiple times to set more than one variable. Refer to [Input Variables on the Command Line](https://developer.hashicorp.com/terraform/cli/commands/plan#input-variables-on-the-command-line) for more information.
 - [`-var-file=FILENAME`](https://developer.hashicorp.com/terraform/cli/commands/plan#var-file-filename) - Sets values for potentially many [input variables](https://developer.hashicorp.com/terraform/language/values/variables) declared in the root module of the configuration, using definitions from a ["tfvars" file](https://developer.hashicorp.com/terraform/language/values/variables#variable-definitions-tfvars-files). Use this option multiple times to include values from more than one file.
+
+
 
 ## 4.4. destroy
 
@@ -715,6 +709,33 @@ resource "aws_ecr_repository" "ecr_repo" {
 ## 4.10. graph
 
 > Generate a Graphviz graph of the steps in an operation
+
+```
+terraform graph [options]
+```
+
+Outputs the visual execution graph of Terraform resources according to either the current configuration or an execution plan.
+
+The graph is outputted in DOT format. The typical program that can read this format is GraphViz, but many web services are also available to read this format.
+
+The `-type` flag can be used to control the type of graph shown. Terraform creates different graphs for different operations. See the options below for the list of types supported. The default type is "plan" if a configuration is given, and "apply" if a plan file is passed as an argument.
+
+Options:
+
+- [`-plan=tfplan`](https://developer.hashicorp.com/terraform/cli/commands/graph#plan-tfplan) - Render graph using the specified plan file instead of the configuration in the current directory.
+- [`-draw-cycles`](https://developer.hashicorp.com/terraform/cli/commands/graph#draw-cycles) - Highlight any cycles in the graph with colored edges. This helps when diagnosing cycle errors.
+- [`-type=plan`](https://developer.hashicorp.com/terraform/cli/commands/graph#type-plan) - Type of graph to output. Can be: `plan`, `plan-destroy`, `apply`, `validate`, `input`, `refresh`.
+- [`-module-depth=n`](https://developer.hashicorp.com/terraform/cli/commands/graph#module-depth-n) - (deprecated) In prior versions of Terraform, specified the depth of modules to show in the output.
+
+
+
+**Example: Generating Images**
+
+```
+terraform graph | dot -Tsvg > graph.svg
+```
+
+![image-20230120183404529](Terraform.assets/image-20230120183404529.png)
 
 
 
