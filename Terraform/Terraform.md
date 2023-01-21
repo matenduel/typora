@@ -1,4 +1,8 @@
-[TOC]
+
+
+``` tex
+# 1.3.X 버젼을 기반으로 작성된 문서입니다. 
+```
 
 
 
@@ -751,9 +755,24 @@ terraform state <subcommand> [options] [args]
 
 > The command is used to list resources within a [Terraform state](https://developer.hashicorp.com/terraform/language/state).
 
+Address와 일치하는 Resource를 보여준다. 
+
+**Usage**
+
 ```
 terraform state list [options] [address...]
 ```
+
+**Output**
+
+```
+aws_instance.foo
+aws_instance.bar[0]
+aws_instance.bar[1]
+module.elb.aws_elb.main
+```
+
+
 
 #### Example: All Resources
 
@@ -802,6 +821,12 @@ module.elb.aws_security_group.sg
 
 >The command is used to show the attributes of a single resource in the [Terraform state](https://developer.hashicorp.com/terraform/language/state).
 
+Address에 존재하는 Resource의 속성들을 보여준다. 
+
+Import를 통해 기존 Resource를 가져오는 경우, `show` 명령어를 통해서 해당 리소스를 위한 코드 작성에 필요한 속성 정보들을 확인할 수 있다. 
+
+**Usage**
+
 ```
 terraform state show [options] ADDRESS
 ```
@@ -825,7 +850,13 @@ resource "packet_device" "worker" {
 
 
 
-### 4.11.3. refresh
+### 4.11.3. refresh (Deprecated)
+
+`refresh`명령어 대신에 `apply` 명령어를 `refresh-only`옵션과 함께 사용하세요
+
+```
+terraform apply -refresh-only
+```
 
 
 
