@@ -1111,7 +1111,9 @@ resource "google_compute_instance" "example" {
 
 ### 6.1.5. lifecycle
 
-The [Resource Behavior](https://developer.hashicorp.com/terraform/language/resources/behavior) page describes the general lifecycle for resources. Some details of that behavior can be customized using the special nested `lifecycle` block within a resource block body:
+`lifecycle`은 `resource` 블록에서 사용하는 중첩 블록이며, 타입과 관계없이 모든 `resource` 블록에서 사용 가능합니다. `lifecycle`은 총 4개의 인자(Arguments)를 가지고 있습니다. 
+
+**Example**
 
 ```
 resource "azurerm_resource_group" "example" {
@@ -1123,25 +1125,75 @@ resource "azurerm_resource_group" "example" {
 }
 ```
 
-`lifecycle` is a nested block that can appear within a resource block. The `lifecycle` block and its contents are meta-arguments, available for all `resource` blocks regardless of type.
+
 
 #### Syntax & Arguments
 
 **create_before_destroy**
 
+
+
 * By default, when Terraform must change a resource argument that cannot be updated in-place due to remote API limitations, Terraform will instead destroy the existing object and then create a new replacement object with the new configured arguments.
+* The `create_before_destroy` meta-argument changes this behavior so that the new replacement object is created *first,* and the prior object is destroyed after the replacement is created.
+
+  This is an opt-in behavior because many remote object types have unique name requirements or other constraints that must be accommodated for both a new and an old object to exist concurrently. Some resource types offer special options to append a random suffix onto each object name to avoid collisions, for example. Terraform CLI cannot automatically activate such features, so you must understand the constraints for each resource type before using `create_before_destroy` with it.
 
 **prevent_destroy**
 
 * This meta-argument, when set to `true`, will cause Terraform to reject with an error any plan that would destroy the infrastructure object associated with the resource, as long as the argument remains present in the configuration.
+* This can be used as a measure of safety against the accidental replacement of objects that may be costly to reproduce, such as database instances. However, it will make certain configuration changes impossible to apply, and will prevent the use of the `terraform destroy` command once such objects are created, and so this option should be used sparingly.
+
+  Since this argument must be present in configuration for the protection to apply, note that this setting does not prevent the remote object from being destroyed if the `resource` block were removed from configuration entirely: in that case, the `prevent_destroy` setting is removed along with it, and so Terraform will allow the destroy operation to succeed.
 
 **ignore_changes (list of attribute names)**
 
 * By default, Terraform detects any difference in the current settings of a real infrastructure object and plans to update the remote object to match configuration.
+* The `ignore_changes` feature is intended to be used when a resource is created with references to data that may change in the future, but should not affect said resource after its creation. In some rare cases, settings of a remote object are modified by processes outside of Terraform, which Terraform would then attempt to "fix" on the next run. In order to make Terraform share management responsibilities of a single object with a separate process, the `ignore_changes` meta-argument specifies resource attributes that Terraform should ignore when planning updates to the associated remote object.
+
+  The arguments corresponding to the given attribute names are considered when planning a *create* operation, but are ignored when planning an *update*. The arguments are the relative address of the attributes in the resource. Map and list elements can be referenced using index notation, like `tags["Name"]` and `list[0]` respectively.
+
+  ```hcl
+  resource "aws_instance" "example" {
+    # ...
+  
+    lifecycle {
+      ignore_changes = [
+        # Ignore changes to tags, e.g. because a management agent
+        # updates these based on some ruleset managed elsewhere.
+        tags,
+      ]
+    }
+  }
+  ```
+
+  Instead of a list, the special keyword `all` may be used to instruct Terraform to ignore *all* attributes, which means that Terraform can create and destroy the remote object but will never propose updates to it.
+
+  Only attributes defined by the resource type can be ignored. `ignore_changes` cannot be applied to itself or to any other meta-arguments.
 
 **replace_triggered_by (list of resource or attribute references)**
 
 * *Added in Terraform 1.2.* Replaces the resource when any of the referenced items change. Supply a list of expressions referencing managed resources, instances, or instance attributes. When used in a resource that uses `count` or `for_each`, you can use `count.index` or `each.key` in the expression to reference specific instances of other resources that are configured with the same count or collection.
+
+* References trigger replacement in the following conditions:
+
+  - If the reference is to a resource with multiple instances, a plan to update or replace any instance will trigger replacement.
+  - If the reference is to a single resource instance, a plan to update or replace that instance will trigger replacement.
+  - If the reference is to a single attribute of a resource instance, any change to the attribute value will trigger replacement.
+
+  You can only reference managed resources in `replace_triggered_by` expressions. This lets you modify these expressions without forcing replacement.
+
+  ```hcl
+  resource "aws_appautoscaling_target" "ecs_target" {
+    # ...
+    lifecycle {
+      replace_triggered_by = [
+        # Replace `aws_appautoscaling_target` each time this instance of
+        # the `aws_ecs_service` is replaced.
+        aws_ecs_service.svc.id
+      ]
+    }
+  }
+  ```
 
 
 
@@ -1201,15 +1253,9 @@ resource "aws_instance" "web" {
 
 ## 7.1. 사용 목적
 
-`import`는 테라폼을 통해 전개하지 않은 기존의 `Object(Resource)`를 `terraform state`로 옮겨주는 작업입니다. 테라폼 코드를 자동으로 생성해주는 것이 아니므로, `Resource`를 사전 또는 사후에 코드로 작성하여야 합니다. 
+`Terraform`은 `tfstate`에 있는 `Resource`만 관리할 수 있습니다. 따라서, 테라폼을 통해 전개하지 않은 기존의 `Object(Resource)`의 경우 `import`를 사용하여 `terraform state`에 해당 `Resource`를 등록해 주어야합니다. 
 
-일반적으로 테라폼 도입 전에 전개된 인프라 또는 장애 대응과 같은 이유로 `Console`에서 작업한 내용을 `Terraform`으로 옮기는 경우에 많이 사용하게 됩니다.
-
-(ex. AWS Console, ...)
-
-Terraform에서 Import는 Terraform을 통해서 생성된 Resource가 아니라 AWS Console을 통해서 직접 추가한 Resource나 다른 Terraform 환경에서 생성한 Resource를 가져오기 위해 제공되는 CLI 명령이다.
-
-사용하는 이유는 Terrafomr은 tfstate파일에 있는 Resource만 본다는 점 때문이다.
+일반적으로 테라폼 도입 전에 전개(`Provisioning`)된 인프라 또는 장애 대응 등의 사유로 `Console`에서 작업한 내용을 `Terraform`으로 옮기는 경우에 많이 사용하게 됩니다. 하지만, `import`를 사용하더라도 `state`외에 테라폼 코드가 수정 또는 생성되는 것이 아니므로 `Resource`를 사전 또는 사후에 코드로 작성하여야 합니다. 
 
 
 
