@@ -625,12 +625,6 @@ terraform import [options] ADDRESS ID
 
 
 
-**Tip**
-
-* `terraform state show`를 통해서 `import`한 리소스의 tf 코드를 확인할 수 있습니다. 해당 코드를 기반으로 Terraform Resource를 작성하면 편합니다. 
-
-
-
 **주의사항**
 
 * Terraform Cloud 사용시 import 작업이 Cloud가 아닌 Local에서 이루어지므로 Terraform Cloud의 Variables를 사용할 수 없습니다. 따라서, Local에서 `var file`등의 형태로 별도로 variables를 제공하여야 합니다. 
@@ -1133,10 +1127,21 @@ resource "azurerm_resource_group" "example" {
 
 #### Syntax & Arguments
 
-* create_before_destroy
-* prevent_destroy
-* ignore_changes
-* replace_triggered_by
+**create_before_destroy**
+
+* By default, when Terraform must change a resource argument that cannot be updated in-place due to remote API limitations, Terraform will instead destroy the existing object and then create a new replacement object with the new configured arguments.
+
+**prevent_destroy**
+
+* This meta-argument, when set to `true`, will cause Terraform to reject with an error any plan that would destroy the infrastructure object associated with the resource, as long as the argument remains present in the configuration.
+
+**ignore_changes (list of attribute names)**
+
+* By default, Terraform detects any difference in the current settings of a real infrastructure object and plans to update the remote object to match configuration.
+
+**replace_triggered_by (list of resource or attribute references)**
+
+* *Added in Terraform 1.2.* Replaces the resource when any of the referenced items change. Supply a list of expressions referencing managed resources, instances, or instance attributes. When used in a resource that uses `count` or `for_each`, you can use `count.index` or `each.key` in the expression to reference specific instances of other resources that are configured with the same count or collection.
 
 
 
@@ -1192,17 +1197,108 @@ resource "aws_instance" "web" {
 
 # 7. Import
 
-Terraform에서 Import는 Terrafomr을 통해서 생성된 Resource가 아니라 AWS Console을 통해서 직접 추가한 Resource나 다른 Terraform 환경에서 생성한 Resource를 가져오기 위해 제공되는 CLI 명령이다.
+
+
+## 7.1. 사용 목적
+
+`import`는 테라폼을 통해 전개하지 않은 기존의 `Object(Resource)`를 `terraform state`로 옮겨주는 작업입니다. 테라폼 코드를 자동으로 생성해주는 것이 아니므로, `Resource`를 사전 또는 사후에 코드로 작성하여야 합니다. 
+
+일반적으로 테라폼 도입 전에 전개된 인프라 또는 장애 대응과 같은 이유로 `Console`에서 작업한 내용을 `Terraform`으로 옮기는 경우에 많이 사용하게 됩니다.
+
+(ex. AWS Console, ...)
+
+Terraform에서 Import는 Terraform을 통해서 생성된 Resource가 아니라 AWS Console을 통해서 직접 추가한 Resource나 다른 Terraform 환경에서 생성한 Resource를 가져오기 위해 제공되는 CLI 명령이다.
 
 사용하는 이유는 Terrafomr은 tfstate파일에 있는 Resource만 본다는 점 때문이다.
 
 
 
-## 7.1. 사용 목적
+**Tip**
+
+* `terraform state show`를 통해서 `import`한 리소스의 tf 코드를 확인할 수 있습니다. 해당 코드를 기반으로 Terraform Resource를 작성하면 편합니다. 
+
+
+
+**주의사항**
+
+* Terraform Cloud 사용시 import 작업이 Cloud가 아닌 Local에서 이루어지므로 Terraform Cloud의 Variables를 사용할 수 없습니다. 따라서, Local에서 `var file`등의 형태로 별도로 variables를 제공하여야 합니다. 
+* `Remote object`는 꼭 하나의 Terraform Resource와 매칭되어야한다. 동일한 `object`를 여러번 Import하면 안됩니다. 
 
 
 
 ## 7.2. 사용 예시
+
+### 7.2.1 기존 ECR 레포지토리 Import하기
+
+1. 빈 블럭 생성
+
+```
+resource "aws_ecr_repository" "ecr_repo" {
+
+}
+```
+
+2. `terraform import`를 사용해 state 가져오기
+
+```
+terraform import -var-file=local.tfvars aws_ecr_repository.ecr_repo <ECR_REPO_NAME>
+
+# Output
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
+3. `terraform state show`를 사용해 테라폼 코드 확인
+
+```
+terraform state show aws_ecr_repository.ecr_repo
+
+# Output
+# aws_ecr_repository.ecr_repo:
+resource "aws_ecr_repository" "ecr_repo" {
+    arn                  = "<ARN>"
+    id                   = "<ECR_REPO_NAME>"
+    image_tag_mutability = "MUTABLE"
+    name                 = "<ECR_REPO_NAME>"
+    registry_id          = "<value>"
+    repository_url       = "<url>"
+    tags                 = {}
+    tags_all             = {
+        "managed_by" = "terraform"
+    }
+
+    encryption_configuration {
+        encryption_type = "AES256"
+    }
+
+    image_scanning_configuration {
+        scan_on_push = true
+    }
+}
+```
+
+4. 테라폼 코드 재작성
+
+```
+resource "aws_ecr_repository" "ecr_repo" {
+  name                 = <ECR_REPO_NAME>
+  image_tag_mutability = "MUTABLE"
+  
+  encryption_configuration {
+  	encryption_type = "AES256"
+  }
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+```
+
+5. `terraform plan`을 통한 검증
+
+
 
 
 
