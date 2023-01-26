@@ -151,7 +151,7 @@ Multiple Workspaces를 지원하는 Backend에서는 `Workspace`별로 `tfstate`
 
 ## workspace
 
-### Key Points
+**Key Points**
 
 - With Workspaces, we can set deploy different environment with same terraform configuration files.
 - To manage multiple distinct sets of infrastructure resources (e.g. multiple environments), we can use Workspaces.
@@ -175,9 +175,13 @@ Workspaces are convenient in a number of situations:
 
 ## Module
 
-통적으로 활용할 수 있는 인프라 코드를 한 곳으로 모아서 정의하는 부분입니다. Module을 사용하면 변수만 바꿔서 동일한 리소스를 손쉽게 생성할 수 있다는 장점이 있습니다.
+`Module`이란 1개 이상의 `resource`로 구성되어있는 `container`를 의미합니다. 일반적으로 프로그래밍에서의 함수와 비슷하며, 테라폼 내에서 특정 `resource` 구성을 위한 코드를 재활용(재사용)하기 위한 용도로 많이 쓰입니다. 
 
 
+
+**Summary**
+
+- Module을 사용하면 변수만 바꿔서 동일한 리소스를 손쉽게 생성할 수 있습니다. 
 
 
 
@@ -195,7 +199,9 @@ https://developer.hashicorp.com/terraform/language/state/purpose
 
 ## provider
 
-Terraform으로 정의할 Infrastructure Provider를 의미합니다.
+Terraform으로 정의할 Infrastructure Provider를 의미하며, [Terraform Registry](https://registry.terraform.io/browse/providers)에서 사용가능한 `provider`를 확인할 수 있습니다.
+
+각 `provider`는 Terraform이 관리할 수 있는 `resource` 또는 `data source`를 제공합니다. 즉, `provider` 없이는 `resource`를 관리할 수 없습니다. 대부분의 `provider`는 특정 플랫폼을 대상으로 작동하도록 구성되어 있습니다.
 
 
 
@@ -215,7 +221,7 @@ provider "aws" {
 
 ## resource
 
-일반적으로 실제로 생성할 인프라 자원을 의미하지만, `iam_policy_attachment`와 같이 행동도 `resource`로 정의된다. 
+일반적으로 실제로 생성할 인프라 자원을 의미하지만, `iam_policy_attachment`와 같은 행동 또는 행위도 `resource`로 정의될 수 있습니다. 
 
 
 
@@ -1028,6 +1034,20 @@ Refer to [Custom Condition Checks](https://developer.hashicorp.com/terraform/lan
 
 Terraform “[Backend](https://www.terraform.io/docs/backends/index.html)” 는 Terraform의 state file을 어디에 저장을 하고, 가져올지에 대한 설정입니다. 기본적으로는는 로컬 스토리지에 저장을 하지만, 설정에 따라서 s3, consul, etcd 등 다양한 “[Backend type](https://www.terraform.io/docs/backends/types/index.html)“을 사용할 수 있습니다.
 
+
+
+**Local Backend Vs. Remote Backend** 
+
+- The local backend stores state on the local filesystem, locks that state using system APIs, and performs operations locally.
+
+- The remote backend is unique among all other Terraform backends because it can both store state snapshots and execute operations for Terraform Cloud's [CLI-driven run workflow](https://developer.hashicorp.com/terraform/cloud-docs/run/cli). It used to be called an "enhanced" backend.
+
+  When using full remote operations, operations like `terraform plan` or `terraform apply` can be executed in Terraform Cloud's run environment, with log output streaming to the local terminal. Remote plans and applies use variable values from the associated Terraform Cloud workspace.
+
+  You can also use Terraform Cloud with local operations, in which case only state is stored in the Terraform Cloud backend.
+
+
+
 ## 5.1. 사용 목적
 
 - **Locking**: 보통 Terraform 코드를 혼자 작성하지 않습니다. 인프라를 변경한다는 것은 굉장히 민감한 작업이 될 수 있습니다. 원격 저장소를 사용함으로써 동시에 같은 state를 접근하는 것을 막아 의도치 않은 변경을 방지할 수 있습니다.
@@ -1035,15 +1055,227 @@ Terraform “[Backend](https://www.terraform.io/docs/backends/index.html)” 는
 
 
 
-## 5.2. 종류
+## 5.2. Remote Backend 목록
+
+> 사용가능한 전체 목록은 [공식문서](https://developer.hashicorp.com/terraform/language/settings/backends/remote)에서 확인 가능합니다. 
+
+### 5.2.1 s3
+
+> https://developer.hashicorp.com/terraform/language/settings/backends/s3
+
+Stores the state as a given key in a given bucket on [Amazon S3](https://aws.amazon.com/s3/). This backend also supports state locking and consistency checking via [Dynamo DB](https://aws.amazon.com/dynamodb/), which can be enabled by setting the `dynamodb_table` field to an existing DynamoDB table name. A single DynamoDB table can be used to lock multiple remote state files. Terraform generates key names that include the values of the `bucket` and `key` variables.
+
+**Warning!** It is highly recommended that you enable [Bucket Versioning](https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html) on the S3 bucket to allow for state recovery in the case of accidental deletions and human error.
+
+**Example Configuration**
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket = "mybucket"
+    key    = "path/to/my/key"
+    region = "us-east-1"
+  }
+}
+```
+
+This assumes we have a bucket created called `mybucket`. The Terraform state is written to the key `path/to/my/key`.
 
 
 
-## 5.3. 장점 Vs. 단점
+**장점**
+
+- ddd
+
+**단점**
+
+- Locking을 위해서는 추가적인 Dynamo DB 설정이 필요하다
+
+
+
+### 5.2.1 gcs
+
+Stores the state as an object in a configurable prefix in a pre-existing bucket on [Google Cloud Storage](https://cloud.google.com/storage/) (GCS). The bucket must exist prior to configuring the backend.
+
+This backend supports [state locking](https://developer.hashicorp.com/terraform/language/state/locking).
+
+**Warning!** It is highly recommended that you enable [Object Versioning](https://cloud.google.com/storage/docs/object-versioning) on the GCS bucket to allow for state recovery in the case of accidental deletions and human error.
+
+**Example Configuration**
+
+```hcl
+terraform {
+  backend "gcs" {
+    bucket  = "tf-state-prod"
+    prefix  = "terraform/state"
+  }
+}
+```
+
+
+
+### 5.2.1 consul
+
+tores the state in the [Consul](https://www.consul.io/) KV store at a given path.
+
+This backend supports [state locking](https://developer.hashicorp.com/terraform/language/state/locking).
+
+**Example Configuration**
+
+```hcl
+terraform {
+  backend "consul" {
+    address = "consul.example.com"
+    scheme  = "https"
+    path    = "full/path"
+  }
+}
+```
+
+Copy
+
+Note that for the access credentials we recommend using a [partial configuration](https://developer.hashicorp.com/terraform/language/settings/backends/configuration#partial-configuration).
+
+
+
+
+
+### 5.2.1 Kubernetes
+
+**Note:** This backend is limited by Kubernetes' maximum Secret size of 1MB. See [Secret restrictions](https://kubernetes.io/docs/concepts/configuration/secret/#restrictions) for details.
+
+Stores the state in a [Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/).
+
+This backend supports [state locking](https://developer.hashicorp.com/terraform/language/state/locking), with locking done using a Lease resource.
+
+**Example Configuration**
+
+```hcl
+terraform {
+  backend "kubernetes" {
+    secret_suffix    = "state"
+    config_path      = "~/.kube/config"
+  }
+}
+```
+
+Copy
+
+This assumes the user/service account running terraform has [permissions](https://kubernetes.io/docs/reference/access-authn-authz/authorization/) to read/write secrets in the [namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) used to store the secret.
+
+If the `config_path` or `config_paths` attribute is set the backend will attempt to use a [kubeconfig file](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) to gain access to the cluster.
+
+If the `in_cluster_config` flag is set the backend will attempt to use a [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to access the cluster. This can be used if Terraform is being run from within a pod running in the Kubernetes cluster.
+
+For most use cases either `in_cluster_config`, `config_path`, or `config_paths` will need to be set. If all flags are set the configuration at `config_path` will be used.
+
+Note that for the access credentials we recommend using a [partial configuration](https://developer.hashicorp.com/terraform/language/settings/backends/configuration#partial-configuration).
+
+
+
+### 5.2.1 pg
+
+> https://developer.hashicorp.com/terraform/language/settings/backends/pg
+
+Stores the state in a [Postgres database](https://www.postgresql.org/) version 10 or newer.
+
+This backend supports [state locking](https://developer.hashicorp.com/terraform/language/state/locking).
+
+**Example Configuration**
+
+```hcl
+terraform {
+  backend "pg" {
+    conn_str = "postgres://user:pass@db.example.com/terraform_backend"
+  }
+}
+```
+
+Copy
+
+Before initializing the backend with `terraform init`, the database must already exist:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+createdb terraform_backend
+```
+
+Copy
+
+This `createdb` command is found in [Postgres client applications](https://www.postgresql.org/docs/10/reference-client.html) which are installed along with the database server.
+
+We recommend using a [partial configuration](https://developer.hashicorp.com/terraform/language/settings/backends/configuration#partial-configuration) for the `conn_str` variable, because it typically contains access credentials that should not be committed to source control:
+
+```hcl
+terraform {
+  backend "pg" {}
+}
+```
+
+Copy
+
+Then, set the credentials when initializing the configuration:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+terraform init -backend-config="conn_str=postgres://user:pass@db.example.com/terraform_backend"
+```
+
+Copy
+
+To use a Postgres server running on the same machine as Terraform, configure localhost with SSL disabled:
+
+```mdx-code-blocks_codeBlockMargin__TI7B4
+terraform init -backend-config="conn_str=postgres://localhost/terraform_backend?sslmode=d
+```
+
+### 5.2.1 Terraform Cloud
+
+> **Note:** We introduced the remote backend in Terraform v0.11.13 and Terraform Enterprise v201809-1. As of Terraform v1.1.0 and Terraform Enterprise v202201-1, **we recommend using the Terraform Cloud's built-in [`cloud` integration](https://developer.hashicorp.com/terraform/cli/cloud/settings)** instead of this backend. The `cloud` option includes an improved user experience and more features.
+
+The main module of a Terraform configuration can integrate with Terraform Cloud to enable its [CLI-driven run workflow](https://developer.hashicorp.com/terraform/cloud-docs/run/cli). You only need to configure these settings when you want to use Terraform CLI to interact with Terraform Cloud. Terraform Cloud ignores them when interacting with Terraform through version control or the API.
+
+> **Hands On:** Try the [Migrate State to Terraform Cloud](https://developer.hashicorp.com/terraform/tutorials/cloud/cloud-migrate) tutorial.
+
+**Usage Example**
+
+To configure the Terraform Cloud CLI integration, add a nested `cloud` block within the `terraform` block. You cannot use the CLI integration and a [state backend](https://developer.hashicorp.com/terraform/language/settings/backends/configuration) in the same configuration.
+
+Refer to [Using Terraform Cloud](https://developer.hashicorp.com/terraform/cli/cloud) in the Terraform CLI documentation for full configuration details, migration instructions, and command line arguments.
+
+
+
+
+
+## 5.3. 장단점
+
+**장점**
+
+
+
+**단점**
 
 
 
 ## 5.4. 설정 방법
+
+**Terraform Cloud**
+
+```
+terraform {
+  cloud {
+    organization = "example_corp"
+    ## Required for Terraform Enterprise; Defaults to app.terraform.io for Terraform Cloud
+    hostname = "app.terraform.io"
+
+    workspaces {
+      tags = ["app"]
+    }
+  }
+}
+```
+
+
+
+**그외**
 
 ```hcl
 terraform {
@@ -1058,6 +1290,10 @@ terraform {
 ```
 
 
+
+## 5.5. Summary
+
+TODO - 표를 이용한 도식화
 
 
 
