@@ -1702,75 +1702,42 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 
 
+# Terraform Cloud
 
+## Terraform Cloud를 사용하는 이유
 
-# Provider
-
-
-
-## Helm
-
-### Authentication
-
-The Helm provider can get its configuration in two ways:
-
-1. Explicitly by supplying attributes to the provider block. This includes:
-
-   - [Using a kubeconfig file](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#file-config)
-
-     - ```
-       provider "helm" {
-         kubernetes {
-           config_path = "~/.kube/config"
-         }
-       }
-       ```
-
-   - [Supplying credentials](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#credentials-config)
-
-     - ```
-       provider "helm" {
-         kubernetes {
-           host     = "https://cluster_endpoint:port"
-       
-           client_certificate     = file("~/.kube/client-cert.pem")
-           client_key             = file("~/.kube/client-key.pem")
-           cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
-         }
-       }
-       ```
-
-   - [Exec plugins](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#exec-plugins)
-
-     - Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
-
-     - ```
-       provider "helm" {
-         kubernetes {
-           host                   = var.cluster_endpoint
-           cluster_ca_certificate = base64decode(var.cluster_ca_cert)
-           exec {
-             api_version = "client.authentication.k8s.io/v1beta1"
-             args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
-             command     = "aws"
-           }
-         }
-       }
-       ```
-
-2. Implicitly through environment variables. This includes:
-
-   - [Using the in-cluster config](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#in-cluster-config)
-
-
-
-
-
-# Terraform Cloud 관련
+TODO 
 
 ## Provider(VCS) 설정 방법 
 
+1. `Settings` > `Version Control` > `Providers`
+2. `Add a VCS Provider` 클릭
+3. 연결할 `Provider` 선택![image-20230127201255674](Terraform.assets/image-20230127201255674.png)
+
 ### Bitbucket
+
+1. `Workspace` 설정에서 `Oauth consumer` 클릭 
+
+2. `Add consumer` 클릭
+
+3. `Oauth consumer` 설정
+
+   1. `Terraform Cloud`에서 제공하는 정보 기입 (Name, Callback URL, URL)
+   2. `This is a private consumer` 클릭
+
+   ![image-20230127203258132](Terraform.assets/image-20230127203258132.png)
+
+4. 권한 설정 ![image-20230127203018413](Terraform.assets/image-20230127203018413.png)
+
+5. `Save` 클릭
+
+6. `Key`와 `Secret`을 Terraform Cloud에 기입하기 ![image-20230127202258578](Terraform.assets/image-20230127202258578.png)
+
+7. `Connect and continue` 클릭 ![image-20230127203540243](Terraform.assets/image-20230127203540243.png)
+
+8. `Bitbucket` 권한 부여
+
+   - 권한 부여시 로그인된 계정이 `Admin`으로 설정된 `Repository`만 연동이 가능하므로 **개인 계정**을 사용하지 않도록 주의!!
 
 
 
@@ -1854,9 +1821,59 @@ terraform {
 
 ## Helm
 
+### Authentication
 
+The Helm provider can get its configuration in two ways:
 
-**Example**
+1. Explicitly by supplying attributes to the provider block. This includes:
+
+   - [Using a kubeconfig file](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#file-config)
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           config_path = "~/.kube/config"
+         }
+       }
+       ```
+
+   - [Supplying credentials](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#credentials-config)
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           host     = "https://cluster_endpoint:port"
+       
+           client_certificate     = file("~/.kube/client-cert.pem")
+           client_key             = file("~/.kube/client-key.pem")
+           cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
+         }
+       }
+       ```
+
+   - [Exec plugins](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#exec-plugins)
+
+     - Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
+
+     - ```
+       provider "helm" {
+         kubernetes {
+           host                   = var.cluster_endpoint
+           cluster_ca_certificate = base64decode(var.cluster_ca_cert)
+           exec {
+             api_version = "client.authentication.k8s.io/v1beta1"
+             args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+             command     = "aws"
+           }
+         }
+       }
+       ```
+
+2. Implicitly through environment variables. This includes:
+
+   - [Using the in-cluster config](https://registry.terraform.io/providers/hashicorp/helm/latest/docs#in-cluster-config)
+
+### **Example**
 
 ```
 provider "helm" {
@@ -1891,6 +1908,8 @@ resource "helm_release" "nginx_ingress" {
   }
 }
 ```
+
+
 
 
 
