@@ -1708,6 +1708,8 @@ This function accepts both IPv6 and IPv4 prefixes, and the result always uses th
 
 TODO 
 
+Remote 화면?
+
 ## Provider(VCS) 설정 방법 
 
 1. `Settings` > `Version Control` > `Providers`
@@ -1762,7 +1764,7 @@ https://developer.hashicorp.com/terraform/cloud-docs/workspaces
 
 
 
-## Remote 화면?
+## State Migration 방법
 
 
 
