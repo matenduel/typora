@@ -1485,6 +1485,10 @@ resource "aws_instance" "web" {
 
 # 7. Import
 
+```
+terraform import [options] ADDRESS ID
+```
+
 
 
 ## 7.1. 사용 목적
@@ -1505,6 +1509,9 @@ resource "aws_instance" "web" {
 
 * Terraform Cloud 사용시 import 작업이 Cloud가 아닌 Local에서 이루어지므로 Terraform Cloud의 Variables를 사용할 수 없습니다. 따라서, Local에서 `var file`등의 형태로 별도로 variables를 제공하여야 합니다. 
 * `Remote object`는 꼭 하나의 Terraform Resource와 매칭되어야한다. 동일한 `object`를 여러번 Import하면 안됩니다. 
+* `ID`에 사용하는 값은 동일한 클라우드라도 Resource마다 다를 수 있습니다. 따라서, `import`전 Terraform 문서에 작성되어있는 `import` 예시를 통해 사용가능한 `ID`를 확인해야 합니다. 
+  * ex) AWS VPC -> vpc_id, AWS Glue Crawler -> Name
+
 
 
 
@@ -1758,13 +1765,58 @@ https://developer.hashicorp.com/terraform/cloud-docs/workspaces
 
 ##  Variables  종류
 
-- hcl Variables
-- Variables
-- Environment variables
+**hcl Variables**
+
+**Variables**
+
+**Environment variables**
 
 
 
 ## State Migration 방법
+
+> https://developer.hashicorp.com/terraform/tutorials/cloud/cloud-migrate
+
+`.terraform`내에 기존에 사용하던 Backend 정보가 기입되어 있으므로, terraform init 과정에서 Backend가 변경된 경우, Migration 여부를 묻는 창이 생긴다.
+
+
+
+**Example**
+
+```
+terraform init
+
+# Output
+Initializing Terraform Cloud...
+Do you wish to proceed?
+  As part of migrating to Terraform Cloud, Terraform can optionally copy your
+  current workspace state to the configured Terraform Cloud workspace.
+
+  Answer "yes" to copy the latest state snapshot to the configured
+  Terraform Cloud workspace.
+
+  Answer "no" to ignore the existing state and just activate the configured
+  Terraform Cloud workspace with its existing state, if any.
+
+  Should Terraform migrate your existing state?
+
+  Enter a value: yes
+
+
+Initializing provider plugins...
+- Reusing previous version of hashicorp/random from the dependency lock file
+- Using previously-installed hashicorp/random v3.0.1
+
+Terraform Cloud has been successfully initialized!
+
+You may now begin working with Terraform Cloud. Try running "terraform plan" to
+see any changes that are required for your infrastructure.
+
+If you ever set or change modules or Terraform Settings, run "terraform init"
+again to reinitialize your working directory.
+```
+
+
 
 
 
