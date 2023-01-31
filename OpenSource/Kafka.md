@@ -604,6 +604,106 @@ helm repo add kafka-ui https://provectus.github.io/kafka-ui
 helm install kafka-ui kafka-ui/kafka-ui --set envs.config.KAFKA_CLUSTERS_0_NAME=local --set envs.config.KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
 ```
 
+## 11.2.2. Configuration(helm chart)
+
+> 23년 1월 31일 기준으로 v0.5.0 tag를 사용하면 Google auth Error가 발생하므로 master tag를 사용하여야 한다. 
+
+**Cluster**
+
+```yaml
+yamlApplicationConfig:
+  kafka:
+    clusters:
+      - name: <cluster_name>
+        bootstrapServers: <broker_urls>
+```
+
+
+
+**Auth - ID/Password**
+
+```yaml
+yamlApplicationConfig:
+  auth:
+    type: "LOGIN_FORM"
+
+  spring:
+    security:
+      user:
+        name: <username>
+        password: <password>
+```
+
+
+
+**Auth - Google Oauth**
+
+> GCP - OAuth 2.0 클라이언트 ID 설정법
+>
+> 1. `Oauth 동의화면` 생성
+> 2. `사용자 인증 정보 만들기` > `Oauth 클라이언트 ID` 클릭
+>    1. 애플리케이션 유형 - 웹 어플리케이션
+>    2. 승인된 리디렉션 URI - `<URL>/login/oauth2/code/google`
+
+```yaml
+yamlApplicationConfig:
+  auth:
+    type: OAUTH2
+    oauth2:
+      client:
+        google:
+          provider: google
+          clientId: <client_id>
+          clientSecret: <client_secret>
+          user-name-attribute: email
+          custom-params:
+            type: google
+            allowedDomain: <domain>
+```
+
+
+
+**RBAC**
+
+```yaml
+yamlApplicationConfig:
+  # Cluster 세팅
+  kafka:
+    clusters:
+      - name: <cluster_name>
+        bootstrapServers: <broker_urls>
+  # 권한 관리
+  rbac:
+    roles:
+      - name: "admin"
+        clusters:
+          - dev-kafka
+        subjects:
+          - provider: oauth_google
+            type: user
+            value: "<email>"
+        permissions:
+          - resource: clusterconfig
+            actions: all
+          - resource: topic
+            value: ".*"
+            actions: ["view", "create", "edit", "delete", "messages_produce"]
+          - resource: consumer
+            value: ".*"
+            actions: all
+          - resource: schema
+            value: ".*"
+            actions: all
+          - resource: connect
+            value: ".*"
+            actions: all
+          - resource: ksql
+            actions: all
+
+```
+
+
+
 
 
 # 12. How to Use
