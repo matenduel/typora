@@ -10,19 +10,21 @@
 
 ## 1.1. IaC 란?
 
-코드형 인프라(Infrastructure as Code, IaC)는 코드를 통해 인프라를 관리하고 프로비저닝하는 것을 말합니다.
+`IaC(Infrastructure as Code)`란 인프라(Infrastructure)를 코드(Code)를 통해 관리하는 것을 말합니다. 인프라를 코드로서 관리한다는 것은 많은 이점을 가져옵니다. 
 
-IaC를 사용하면 인프라 사양을 담은 구성 파일이 생성되므로 구성을 편집하고 배포하기가 더 쉬워집니다. 또한 IaC는 매번 동일한 환경을 프로비저닝하도록 보장합니다. IaC는 구성 사양을 코드화하고 문서화함으로써 [구성 관리](https://www.redhat.com/ko/topics/automation/what-is-configuration-management)를 지원하며, 따라서 구성 변경 사항을 문서화하지 않고 임시로 변경하는 일을 막을 수 있습니다.
+첫번째로 버전 관리 시스템(`git`, ...)등을 통해서 인프라의 변경사항을 기록하고 언제든지 원하는 시점의 인프라로 롤백할 수 있습니다. PR을 통해 인프라 변경사항을 팀 또는 회사 차원에서 관리감독하여, 변경 사항을 문서화하지 않고 임시 또는 임의로 변경하는 일을 방지할 수 있습니다.
 
-버전 제어는 IaC의 중요한 부분입니다. 다른 소프트웨어 소스 코드 파일과 마찬가지로 구성 파일도 소스 제어가 필요합니다. 코드로 인프라를 배포한다는 것은 인프라를 모듈식 구성 요소로 분할하고 자동화를 통해 다양한 방식으로 결합할 수 있다는 뜻이기도 합니다.
+두번째로 개발 환경과 관계없이 매번 동일한 방식을 이용하여 인프라가 구성 또는 변경할 수 있습니다. 개발 환경에서 테스트한 인프라 변경 사항을 운영 환경에 적용할 때, 기존에 작업한 방식 또는 순서가 달라지게 된다면 네트워크 장애, 권한 문제와 같은 여러 문제점이 발생할 수 있습니다. 하지만,  `IaC`의 경우, 매번 동일한 방식을 이용하여 인프라를 구성 및 변경하는 것을 보장하므로 수동으로 인프라를 프로비저닝하는 것에 비해 더 빠르고 더 안전합니다. 
 
-IaC로 [인프라 프로비저닝](https://www.redhat.com/ko/topics/automation/what-is-provisioning)을 자동화하면 애플리케이션을 개발하거나 배포할 때마다 개발자가 직접 서버, 운영 체제, 스토리지, 기타 인프라 구성 요소를 수동으로 프로비저닝하고 관리할 필요가 없어집니다. 인프라를 코드화하여 템플릿을 만들고 프로비저닝할 때 이 템플릿을 사용하면 됩니다. 
+
+
+(??) 세번째로 모듈화 및 그룹화가 가능합니다. 모듈화를 통해 개발 환경 또는 프로젝트가 다른 경우에도 유사한 구성의 리소스를 손쉽게 생성 및 관리할 수 있습니다. 또한, 인프라를 네트워크, 서버, 데이터베이스와 같은 자원 단위 또는 프로젝트별로 그룹화하여 관리하여 관리 복잡도를 줄일 수 있습니다. 
 
 
 
 **선언형 Vs. 절차형(명령형)**
 
-일반적으로 `IaC`, `SQL`과 같은 언어들은 작동방식에 따라 선언형(명령형)과 절차형으로 나뉩니다. 
+`IaC`, `SQL`과 같은 언어들은 일반적으로 작동방식에 따라 선언형(명령형)과 절차형으로 나뉩니다. 
 
 선언형의 경우 원하는 최종 상태를 정의하는 코드를 작성하면, `Terraform`, `Optimizer(DB)`와 같은 엔진이 최종 상태를 구현하기 위한 로직을 계산 및 수행합니다. 사용자가 기존 상태를 모르는 상황에서도 선언(정의)한 최종 상태를 구현하기 위해서, `Terraform`의 경우 기존 상태값과 관련된 정보를 저장하고 있습니다. 다만, 실행 계획을 사용자가 아닌 엔진에서 계산 및 실행하므로 사용자가 의도하지 않은 방식 또는 형태로 실행될 수 있습니다. 
 
@@ -36,23 +38,29 @@ HashiCorp Terraform is an infrastructure as code tool that lets you define both 
 
 
 
-### 작동방식
+**작동방식**
+
+테라폼은 클라우드 플랫폼 또는 기타 서비스의 `API`를 사용하여 리소스를 생성 및 관리합니다. 프로바이더(`Provider`)를 통해서 테라폼은  각 플랫폼과 API를 통해 상호작용하게 됩니다. 
 
 Terraform creates and manages resources on cloud platforms and other services through their application programming interfaces (APIs). Providers enable Terraform to work with virtually any platform or service with an accessible API.
 
 ![how_it_works](Terraform.assets/how_it_works.PNG)
 
+테라폼의 워크플로우는 3개의 스테이지(Write, Plan, Apply)로 구성됩니다. 
+
 The core Terraform workflow consists of three stages:
 
-- **Write:** You define resources, which may be across multiple cloud providers and services. For example, you might create a configuration to deploy an application on virtual machines in a Virtual Private Cloud (VPC) network with security groups and a load balancer.
-- **Plan:** Terraform creates an execution plan describing the infrastructure it will create, update, or destroy based on the existing infrastructure and your configuration.
-- **Apply:** On approval, Terraform performs the proposed operations in the correct order, respecting any resource dependencies. For example, if you update the properties of a VPC and change the number of virtual machines in that VPC, Terraform will recreate the VPC before scaling the virtual machines.
+- **Write**
+  - 사용할 리소스를 정의합니다. 
+  - You define resources, which may be across multiple cloud providers and services. For example, you might create a configuration to deploy an application on virtual machines in a Virtual Private Cloud (VPC) network with security groups and a load balancer.
+- **Plan**
+  - 현재 인프라와 정의된 인프라를 기반으로 생성, 업데이트 또는 삭제할 리소스에 대한 실행 계획을 작성합니다. 
+  - Terraform creates an execution plan describing the infrastructure it will create, update, or destroy based on the existing infrastructure and your configuration.
+- **Apply**
+  - 계획이 승인되면 테라폼은 리소스간의 의존성을 고려하여 정확한 순서로 계획된 작업을 수행합니다.  
+  - On approval, Terraform performs the proposed operations in the correct order, respecting any resource dependencies. For example, if you update the properties of a VPC and change the number of virtual machines in that VPC, Terraform will recreate the VPC before scaling the virtual machines.
 
 ![workflow](Terraform.assets/workflow.PNG)
-
-
-
-## 1.3. 비교하기
 
 
 
