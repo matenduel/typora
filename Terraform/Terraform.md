@@ -22,6 +22,10 @@
 
 
 
+마지막으로, IaC는 결국 Code이므로 IDE와 같은 개발도구를 사용하여 인프라간의 의존성들을 더 쉽게 파악할 수 있습니다. 
+
+
+
 **선언형 Vs. 절차형(명령형)**
 
 `IaC`, `SQL`과 같은 언어들은 일반적으로 작동방식에 따라 선언형(명령형)과 절차형으로 나뉩니다. 
@@ -213,11 +217,11 @@ Terraform으로 정의할 Infrastructure Provider를 의미하며, [Terraform Re
 
 ```hcl
 provider "aws" {
-  alias = "balaan-vpc"
-  region  = var.balaan-vpc-region
+  alias = "product-vpc"
+  region  = var.product-vpc-region
   shared_config_files = ["$HOME/.aws/config"]
   shared_credentials_files = ["$HOME/.aws/credentials"]
-  profile = var.balaan-vpc-peer-profile
+  profile = var.product-vpc-peer-profile
 }
 ```
 
@@ -295,8 +299,8 @@ data 사용은 `data.<TYPE>.<NAME>.<ATTRIBUTE>` 과 같이 사용할 수 있습�
 
 ```
 # Get caller identity
-data "aws_caller_identity" "balaan-vpc" {
-  provider = aws.balaan-vpc
+data "aws_caller_identity" "product-vpc" {
+  provider = aws.product-vpc
 }
 
 # Find the latest available AMI that is tagged with Component = web
@@ -1836,7 +1840,7 @@ terraform {
     }
   }
   cloud {
-    organization = "balaan-data-iac"
+    organization = "data-iac"
 
     workspaces {
       tags = ["test", "dev"]  # 모든걸 만족하는 workspace가 선택됨.

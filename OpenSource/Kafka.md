@@ -164,6 +164,8 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
 
 파티션의 갯수는 추가만 가능하며, 감소는 불가능하다. 따라서, 파티션의 갯수를 줄이고 싶은 경우 `Topic`을 삭제한 후 재생성 해야한다. 
 
+Message의 Key가 동일한 경우, 별도로 partition을 지정한 것이 아니라면, 동일한 Key를 가진 Message는 동일한 파티션으로 들어간다. 
+
 
 
 ## 3.8. Replication
@@ -285,6 +287,10 @@ Apache Kafka에서 프로듀서 개념은 대부분의 메시징 시스템과 �
         | Update Mode:  | read-only |
 
 ## 4.2. Topic
+
+Compact Vs. Delete
+
+
 
 ## 4.3. Producer
 
@@ -526,6 +532,8 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 # 7. Kafka Connect
+
+> 자세한 내용은 `kafka connect.md` 참조
 
 ![img](https://blog.kakaocdn.net/dn/cF4X3U/btrhVsFQhBK/uMAETh8q7SIPKPBdVjcfz0/img.png)
 
