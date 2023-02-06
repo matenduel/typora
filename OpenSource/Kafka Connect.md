@@ -4,13 +4,37 @@
 
 ![img](Kafka Connect.assets/img.png)
 
-**개론** 
 
-## Core Concepts and APIs
 
-### Connectors and tasks
+Kafka Connect is a tool for scalably and reliably streaming data between Apache Kafka® and other data systems. It makes it simple to quickly define connectors that move large data sets in and out of Kafka. Kafka Connect can ingest entire databases or collect metrics from all your application servers into Kafka topics, making the data available for stream processing with low latency. An export connector can deliver data from Kafka topics into secondary indexes like Elasticsearch, or into batch systems–such as Hadoop for offline analysis.
 
-To copy data between Kafka and another system, users instantiate Kafka [Connectors](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/connector/Connector.html) for the systems they want to pull data from or push data to. Connectors come in two flavors: [SourceConnectors](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/source/SourceConnector.html), which import data from another system, and [SinkConnectors](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/sink/SinkConnector.html), which export data to another system. For example, `JDBCSourceConnector` would import a relational database into Kafka, and `HDFSSinkConnector` would export the contents of a Kafka topic to HDFS files.
+Kafka Connect is a free, open-source component of Apache Kafka® that works as a centralized data hub for simple data integration between databases, key-value stores, search indexes, and file systems. The information in this page is specific to Kafka Connect for Confluent Platform
+
+Kafka Connect provides the following benefits:
+
+- **Data-centric pipeline**: Connect uses meaningful data abstractions to pull or push data to Kafka.
+- **Flexibility and scalability**: Connect runs with streaming and batch-oriented systems on a single node (standalone) or scaled to an organization-wide service (distributed).
+- **Reusability and extensibility**: Connect leverages existing connectors or extends them to fit your needs and provides lower time to production.
+
+Kafka Connect is focused on streaming data to and from Kafka, making it simpler for you to write high quality, reliable, and high performance connector plugins. Kafka Connect also enables the framework to make guarantees that are difficult to achieve using other frameworks. It is an integral component of an ETL pipeline, when combined with Kafka and a stream processing framework.
+
+
+
+카프카와 다른 시스템 사이에서 데이터를 복사하기 위해, 해당 시스템의 데이터를 Push 또는 Pull할 카프카 커넥터를 인스턴스화(instantiate) 해야한다. 
+
+
+
+**주요 컨셉** 
+
+- 데이터 중심 파이프라인 : 카프카 커넥트를 이용해 카프카로 데이터를 보내거나, 카프카로 데이터를 가져옴
+- 유연성 : 커넥트는 테스트를 위한 단독 모드(standalone mode)와 대규모 운영 환경을 위한 분산 모드(distributed mode)를 제공
+- 재사용성과 확장성 : 커넥트는 기존 커넥터를 활용할 수도 있고 운영 환경에서의 요구사항에 맞춰 확장이 가능
+- 편리한 운영과 관리 : 카프카 커넥트가 제공하는 REST API로 빠르고 간단하게 커넥트 운영 가능
+- 장애 및 복구 : 카프카 커넥트를 분산 모드로 실행하면 워커 노드의 장애 상황에도 메타데이터를 백업함으로써 대응 가능하며 고가용성 보장
+
+
+
+**Connectors and tasks**
 
 Implementations of the `Connector` class do not perform data copying themselves: their configuration describes the set of data to be copied, and the `Connector` is responsible for breaking that job into a set of [Tasks](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/connector/Task.html) that can be distributed to Kafka Connect workers. Tasks also come in two corresponding flavors: [SourceTask](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/source/SourceTask.html) and [SinkTask](https://docs.confluent.io/platform/7.3/connect/javadocs/javadoc/org/apache/kafka/connect/sink/SinkTask.html). Optionally, the implementation of the `Connector` class can monitor the data changes of external systems and request task reconfiguration.
 
@@ -39,16 +63,6 @@ MongoDB와 Redis, MySQL 등 대부분의 DB는 Oplog나 Binary Log 등 부르는
 #### 스트림 데이터를 타깃에 반영해 상태를 변경
 
 앞서 설명한 기능과 반대 방향으로 작동하는 경우입니다. 수집한 스트림 데이터가 Kafka 토픽에 저장돼 있는 경우 이 스트림을 타깃에 저장할 수 있습니다. Kafka Connect의 Sink Connector가 바로 이렇게 작동합니다. 이때 타깃이 반드시 DB일 필요는 없습니다. 예를 들어 HTTP Sink Connector는 스트림 데이터를 HTTP로 전송합니다.
-
-
-
-ㄴㄴㄴ
-
-- 데이터 중심 파이프라인 : 카프카 커넥트를 이용해 카프카로 데이터를 보내거나, 카프카로 데이터를 가져옴
-- 유연성 : 커넥트는 테스트를 위한 단독 모드(standalone mode)와 대규모 운영 환경을 위한 분산 모드(distributed mode)를 제공
-- 재사용성과 확장성 : 커넥트는 기존 커넥터를 활용할 수도 있고 운영 환경에서의 요구사항에 맞춰 확장이 가능
-- 편리한 운영과 관리 : 카프카 커넥트가 제공하는 REST API로 빠르고 간단하게 커넥트 운영 가능
-- 장애 및 복구 : 카프카 커넥트를 분산 모드로 실행하면 워커 노드의 장애 상황에도 메타데이터를 백업함으로써 대응 가능하며 고가용성 보장
 
 
 
@@ -91,19 +105,13 @@ MongoDB와 Redis, MySQL 등 대부분의 DB는 Oplog나 Binary Log 등 부르는
 
 **Distributed Workers**
 
+> **Important**
+>
+> >  All workers with the same `group.id` will be in the same connect cluster. For example, if worker-a has `group.id=connect-cluster-a` and worker-b has the same `group.id`, worker-a and worker-b will form a cluster called `connect-cluster-a`.
+
 2개 이상의 서버 또는 인스턴스로 구성된 형태이며, `Kafka Connect`를 위한 확장성(`Scalability`)과 내결함성(`fault tolerance`)을 제공합니다. 
 
-`Distributed mode`에서는 동일한 `group.id`를 이용하여 많은 `worker` 프로세스를 실행합니다. automatically coordinate to schedule execution of connectors and tasks across all available workers
-
-
-
-Worker와 관련하여 생성, 삭제, 중지와 같은 변경사항이 생기는 경우, 나머지 worker들이 해당 변경사항을 탐지하여 connector와 task를 재분배합니다. 이러한 과정은 Consumer Group Rebalancing과 유사하며, 실제로 consumer group을 이용하여 coordinate and rebalance를 처리합니다. 
-
-
-
-**Important**
-
->  All workers with the same `group.id` will be in the same connect cluster. For example, if worker-a has `group.id=connect-cluster-a` and worker-b has the same `group.id`, worker-a and worker-b will form a cluster called `connect-cluster-a`.
+`Distributed mode`에서는 동일한 `group.id`를 이용하여 많은 `worker` 프로세스를 실행하며, 가용 가능한 `worker`에서 `connector`와 `task`를 자동으로 관리 및 스케쥴링 합니다. `Worker`가 변경(생성, 삭제, 중지)되는 경우, 가용 가능한 나머지 worker들이 해당 변경사항을 탐지하여 `connector`와 `task`를 재분배합니다. 이러한 과정은 Consumer Group Rebalancing과 유사하며, 실제로 consumer group을 이용하여 coordinate and rebalance를 처리합니다. 
 
 
 
@@ -127,6 +135,8 @@ Worker와 관련하여 생성, 삭제, 중지와 같은 변경사항이 생기�
 
 **Source Connector**
 
+- Source connectors ingest entire databases and stream table updates to Kafka topics. Source connectors can also collect metrics from all your application servers and store the data in Kafka topics–making the data available for stream processing with low latency.
+
 * Producer 역할
 * data source에 담긴 데이터를 topic에 담는 역할을 하는 connector
   * op log (bin log)를 활용하여 모든 operation에 대해 Message를 발행
@@ -136,6 +146,7 @@ Worker와 관련하여 생성, 삭제, 중지와 같은 변경사항이 생기�
 
 **Sink Connector**
 
+* Sink connectors deliver data from Kafka topics to secondary indexes, such as Elasticsearch, or batch systems such as Hadoop for offline analysis.
 * Consumer 역할
 * topic에 담긴 데이터를 특정 data source로 보내는 역할을 하는 connector
 
