@@ -129,26 +129,32 @@ MongoDB와 Redis, MySQL 등 대부분의 DB는 Oplog나 Binary Log 등 부르는
 
 > the high level abstraction that coordinates data streaming by managing tasks
 
-![connector-model-simple](Kafka Connect.assets/connector-model-simple.png)Data Source(DB)의 데이터를 처리하는 소스가 들어있는 jar파일
+![connector-model-simple](Kafka Connect.assets/connector-model-simple.png)
+
+
+
+Data Source(DB)의 데이터를 처리하는 소스가 들어있는 jar파일
 
 
 
 **Source Connector**
 
-- Source connectors ingest entire databases and stream table updates to Kafka topics. Source connectors can also collect metrics from all your application servers and store the data in Kafka topics–making the data available for stream processing with low latency.
-
-* Producer 역할
-* data source에 담긴 데이터를 topic에 담는 역할을 하는 connector
-  * op log (bin log)를 활용하여 모든 operation에 대해 Message를 발행
-  * 또는, Query를 사용하여 id, timestamp를 사용하여 Insert, Update에 대해 Message를 발행
+- `Source connector`는 데이터베이스의 변경사항 또는 어플리케이션의 메트릭 등을 `Kafka`에 발행하여, 스트림 데이터를 실시간(낮은 지연시간)으로 처리할 수 있도록 해줍니다.
+- 일반적으로 데이터베이스용 `connector`의 경우 `log` 또는 `query`를 사용합니다.
+  - query를 기반으로 작동하는 `connector`의 경우 
+    - `id`, `timestamp`와 같은 정렬이 가능한 `column`을 이용하여 Insert와 Update 이벤트를 발행합니다. 
+    - `Delete` 이벤트를 발행할 수 없습니다. 
+    - `query`를 사용하므로 `log`기반에 비해 상대적으로 CPU, Ram 사용량이 더 많습니다. 
+  - log(`op log`, `bin log`, `WAL`, ...)을 기반으로 작동하는 `connector`의 경우
+    - `Delete` 이벤트도 발행할 수 있습니다. 
+    - `log`를 기반으로 작동하므로 CPU, Ram 사용량이 거의 증가하지 않습니다. 
+    - IO 사용량이 증가할 수 있습니다. 
 
 
 
 **Sink Connector**
 
-* Sink connectors deliver data from Kafka topics to secondary indexes, such as Elasticsearch, or batch systems such as Hadoop for offline analysis.
-* Consumer 역할
-* topic에 담긴 데이터를 특정 data source로 보내는 역할을 하는 connector
+- `Sink connector`는 `Kafka` 토픽에서 데이터베이스(`MySQL`, `PostgreSQL`, `MongoDB`, ...), `Elasticsearch`, `S3`와 같은 `Data Source`로 데이터를 전달합니다. 
 
 
 
@@ -366,18 +372,72 @@ consumer.override.<Producer_Config>
 
 
 
-**Example**
+**장점**
+
+- 다른 Debezium Connector도 함께 사용하는 경우 관리 포인트 감소
+
+- Debezium UI를 통한 Connector 관리
+
+
+
+**주의 사항**
+
+- `filtering`이 `connector` 내부에서 이루어지므로 Change Stream을 통해서 전체 Document를 받게되어 네트워크 비용 증가
+
+- Full document가 `16Mb`에 근접한 경우,  Change Stream을 통해 데이터를 받는 과정에서 사이즈 초과로인한 `BSONObjectTooLarge`에러가 발생할 수 있다. 
+
+```tex
+2023-02-08 07:57:49,961 ERROR  MongoDB|balis3|streaming  Producer failure   [io.debezium.pipeline.ErrorHandler]
+org.apache.kafka.connect.errors.ConnectException: Error while attempting to read from change stream on ‘<database>/<Host>:27017,<Host>:27017,<Host>:27017’
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.lambda$establishConnection$3(MongoDbStreamingChangeEventSource.java:170)
+        at io.debezium.connector.mongodb.ConnectionContext$MongoPreferredNode.execute(ConnectionContext.java:381)
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.streamChangesForReplicaSet(MongoDbStreamingChangeEventSource.java:115)
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.execute(MongoDbStreamingChangeEventSource.java:96)
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.execute(MongoDbStreamingChangeEventSource.java:52)
+        at io.debezium.pipeline.ChangeEventSourceCoordinator.streamEvents(ChangeEventSourceCoordinator.java:174)
+        at io.debezium.pipeline.ChangeEventSourceCoordinator.executeChangeEventSources(ChangeEventSourceCoordinator.java:141)
+        at io.debezium.pipeline.ChangeEventSourceCoordinator.lambda$start$0(ChangeEventSourceCoordinator.java:109)
+        at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+        at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+        at java.base/java.lang.Thread.run(Thread.java:829)
+Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 with name ‘BSONObjectTooLarge’ and error message ‘BSONObj size: 17236670 (0x10702BE) is invalid. Size must be between 0 and 16793600(16MB) First element: _id: { _data: “8263E35293000001282B022C0100296E5A1004907AB287AA1844CF9C1F4A940CE2F13046645F69640064638F3AD9302A3102341AE88E0004” }’ on server <Host>:27017
+        at com.mongodb.internal.operation.QueryHelper.translateCommandException(QueryHelper.java:29)
+        at com.mongodb.internal.operation.QueryBatchCursor.lambda$getMore$1(QueryBatchCursor.java:298)
+        at com.mongodb.internal.operation.QueryBatchCursor$ResourceManager.executeWithConnection(QueryBatchCursor.java:532)
+        at com.mongodb.internal.operation.QueryBatchCursor.getMore(QueryBatchCursor.java:286)
+        at com.mongodb.internal.operation.QueryBatchCursor.tryHasNext(QueryBatchCursor.java:239)
+        at com.mongodb.internal.operation.QueryBatchCursor.lambda$tryNext$0(QueryBatchCursor.java:222)
+        at com.mongodb.internal.operation.QueryBatchCursor$ResourceManager.execute(QueryBatchCursor.java:417)
+        at com.mongodb.internal.operation.QueryBatchCursor.tryNext(QueryBatchCursor.java:221)
+        at com.mongodb.internal.operation.ChangeStreamBatchCursor$3.apply(ChangeStreamBatchCursor.java:107)
+        at com.mongodb.internal.operation.ChangeStreamBatchCursor$3.apply(ChangeStreamBatchCursor.java:103)
+        at com.mongodb.internal.operation.ChangeStreamBatchCursor.resumeableOperation(ChangeStreamBatchCursor.java:200)
+        at com.mongodb.internal.operation.ChangeStreamBatchCursor.tryNext(ChangeStreamBatchCursor.java:103)
+        at com.mongodb.client.internal.MongoChangeStreamCursorImpl.tryNext(MongoChangeStreamCursorImpl.java:87)
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.readChangeStream(MongoDbStreamingChangeEventSource.java:244)
+        at io.debezium.connector.mongodb.MongoDbStreamingChangeEventSource.lambda$streamChangesForReplicaSet$0(MongoDbStreamingChangeEventSource.java:116)
+        at io.debezium.connector.mongodb.ConnectionContext$MongoPreferredNode.execute(ConnectionContext.java:377)
+        ... 11 more
+```
+
+- `groovy`를 사용하는 경우 `!=`가 정상적으로 작동되지 않는 것으로 보인다. `!condition` 형태로 작성하자
+
+
+
+**Example: **
 
 ```json
 {
     "name": "deb-product-source-raw",
     "config": {
         "connector.class": "io.debezium.connector.mongodb.MongoDbConnector",
-        "collection.include.list": "hub.confirmed",
+        "collection.include.list": "<database>.<collection>",
         "mongodb.name": "connector",
-        "mongodb.hosts": "mdb00.balaan.io:27017,mdb02.balaan.io:27017,mdb03.balaan.io:27017",
-        "mongodb.user": "vault_dev",
-        "mongodb.password": "balaan",
+        "mongodb.hosts": "<host1>:27017,<host2>:27017,<host3>:27017",
+        "mongodb.user": "<username>",
+        "mongodb.password": "<password>",
         "capture.mode": "change_streams_update_full",
         "snapshot.mode": "never",
         "topic.prefix": "raw",
@@ -397,8 +457,6 @@ consumer.override.<Producer_Config>
 
 
 
-
-
 ### 3.1.2. PostgreSQL 
 
 #### Source Connector
@@ -411,13 +469,40 @@ consumer.override.<Producer_Config>
 
 
 
-## 3.2. MongoDB
+## 3.2. Mongo
+
+### 3.2.1. MongoDB 
+
+> docs -> https://www.mongodb.com/docs/kafka-connector/current/
+
+#### Source Connector
+
+
+
+**장점**
+
+Pipeline을 이용하여 불필요한 변경사항 또는 필드를 제거하고 받을 수 있다. (MongoDB내에서 제거되므로 네트워크 비용 절감)
+
+
+
+**주의 사항**
+
+
 
 
 
 ## 3.3. Confluent
 
 
+
+
+
+## 3.4 주의 사항
+
+**MongoDB**
+
+- Pre image를 사용하는 경우 사실상 Document 사이즈를 8MB이하로 관리하여야한다. 
+  - pre + post하는 경우 16MB를 초과할 수 있음
 
 
 
