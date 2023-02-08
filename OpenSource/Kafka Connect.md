@@ -133,7 +133,19 @@ MongoDB와 Redis, MySQL 등 대부분의 DB는 Oplog나 Binary Log 등 부르는
 
 
 
-Data Source(DB)의 데이터를 처리하는 소스가 들어있는 jar파일
+`Kafka Connect`에서 `Connector`는 데이터를 어디서(from) 또는 어디로(to) 복사 또는 전달할지를 정의합니다. `Connector`에서 사용, 실행하는 모든 `code(Class)`는 `Connector plugin`에 정의되어 있으며 `jar` 파일 또는 `CLI`를 사용하여 설치할 수 있습니다.
+
+```shell
+# CLI Example - Confluent Hub
+confluent-hub install confluentinc/kafka-connect-aws-cloudwatch-logs:1.2.3
+
+# Manual Install Example - Jar file
+cp <path>/kafka-connect-hdfs-3.0.1-package.jar <plugin_path>
+```
+
+
+
+`Connector instance`는 카프카와 다른 시스템 간의 데이터 전달을 관리하는 책임을 가지고 있는 논리적인 작업을 의미합니다. `Connector instance`와 `Connector plugin`은 일반적으로 `connector`라고 혼용되어 지칭됩니다. 하지만, `instance`와 `plugin`은 다른 개념이므로 맥락에 따라서 구분하여야 합니다. 예를 들어,  `connector`를 설치하는 상황에서 `connector`는 `plugin`을 의미하며, `connector`의 상태를 체크하는 상황에서는 `instance`를 의미합니다. 
 
 
 
@@ -161,6 +173,12 @@ Data Source(DB)의 데이터를 처리하는 소스가 들어있는 jar파일
 ## Task
 
 > the implementation of how data is copied to or from Kafka
+
+`Task`는 `Connect`의 데이터 모델에서 가장 중요한 요소입니다. 각 인스턴스(`connector instance`)에 의해서 관리되는 `Task`들은 실제로 데이터를 처리하는 주체입니다. `Kafka Connect`는 단일 작업을 다수의 `Task`로 분할하여, 병렬 처리와 확장성을 손쉽게 사용할 수 있도록 제공합니다. 
+
+![data-model-simple](Kafka Connect.assets/data-model-simple.png)
+
+`Task`는 작업 상태와 관련한 정보를 `Task` 내부에 보관하지 않습니다. 연관된 `Connector`에서 관리하는 별도의 Kafka Topic(`config.storage.topic`, `status.storage.topic`)에 저장합니다. 그로 인해, 언제든지 `Task`가 실행, 중지, 재시작하더라도 탄력적이고 확장 가능한 데이터 파이프라인을 제공할 수 있습니다. 
 
 
 
