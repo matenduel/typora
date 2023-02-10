@@ -186,11 +186,34 @@ cp <path>/kafka-connect-hdfs-3.0.1-package.jar <plugin_path>
 
 > the code used to translate data between Connect and the system sending or receiving data
 
+Converters are necessary to have a Kafka Connect deployment support a particular data format when writing to or reading from Kafka. Tasks use converters to change the format of data from bytes to a Connect internal data format and vice versa.
+
+By default, Confluent Platform provides the following converters:
+
+- **AvroConverter** `io.confluent.connect.avro.AvroConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
+- **ProtobufConverter** `io.confluent.connect.protobuf.ProtobufConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
+- **JsonSchemaConverter** `io.confluent.connect.json.JsonSchemaConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
+- **JsonConverter** `org.apache.kafka.connect.json.JsonConverter` (without Schema Registry): use with structured data
+- **StringConverter** `org.apache.kafka.connect.storage.StringConverter`: simple string format
+- **ByteArrayConverter** `org.apache.kafka.connect.converters.ByteArrayConverter`: provides a “pass-through” option that does no conversion
+
+Converters are decoupled from connectors themselves to allow for reuse of converters between connectors naturally. For example, using the same Avro converter, the JDBC Source Connector can write Avro data to Kafka and the HDFS Sink Connector can read Avro data from Kafka. This means the same converter can be used even though, for example, the JDBC source returns a `ResultSet` that is eventually written to HDFS as a parquet file.
+
+The following graphic shows how converters are used when reading from a database using a JDBC Source Connector, writing to Kafka, and finally, writing to HDFS with an HDFS Sink Connector.
+
+![converter-basics](Kafka Connect.assets/converter-basics.png)
 
 
 
 
-## Plugin
+
+## Transforms
+
+
+
+- ValueToKey
+  - https://docs.confluent.io/platform/current/connect/transforms/valuetokey.html#valuetokey
+- 
 
 
 
@@ -497,13 +520,56 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 
 
+**주요 Configuration**
+
+pipeline
+
+change.stream.full.document
+
+
+
+startup.mode.copy.existing.pipeline
+
+
+
 **장점**
 
-Pipeline을 이용하여 불필요한 변경사항 또는 필드를 제거하고 받을 수 있다. (MongoDB내에서 제거되므로 네트워크 비용 절감)
+- `Pipeline`을 이용하여 불필요한 필드를 제거할 수 있다. 
+  - MongoDB에서 Project되는 것이므로 Document 사이즈를 줄여 네트워크 비용을 절감할 수 있다. 
 
 
 
 **주의 사항**
+
+- 현재, Key의 경우 Resume Token이 기입되어있다 -> Value to key를 사용하여 변경해볼 예정
+
+
+
+**Example**
+
+```json
+{
+    "name": "connector-cdc",
+    "config": {
+        "connector.class": "com.mongodb.kafka.connect.MongoSourceConnector",
+        "connection.uri": "mongodb://<username>:<password>@<host1>:27017,<host2>:27017,<host3>:27017/",
+        "database": "<database>",
+        "topic.prefix":"<prefix>",
+        "collection": "<collection>",
+        "change.stream.full.document": "updateLookup",
+        "producer.override.compression.type": "gzip",
+        "startup.mode": "latest",
+        "publish.full.document.only": false,
+        "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+        "key.converter.schemas.enable": false,
+        "value.converter.schemas.enable": false,
+        "pipeline": "[{\"$project\": { \"fullDocument.id\": 0 } }]",
+        "output.format.value": "json",
+        "output.format.key":"json"
+    }
+}
+```
 
 
 
