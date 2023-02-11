@@ -591,6 +591,58 @@ Unseal Progress: 0
          }
    ```
 
+## 6.2. Storage 설정하기
+
+### Consul
+
+### Raft
+
+### 그 외
+
+
+
+## Agent Inject
+
+### Kubernetes 
+
+> https://developer.hashicorp.com/vault/docs/platform/k8s/injector
+
+
+
+## Oauth 설정 방법
+
+### Google
+
+> https://developer.hashicorp.com/vault/docs/auth/jwt/oidc-providers/google
+
+## 인증 방법
+
+### Kubernetes
+
+
+
+### Agent
+
+### AWS (IAM)
+
+> https://faun.pub/using-aws-iam-auth-method-with-hashicorp-vault-7f174e5d1bdd
+
+
+
+
+
+
+
+# Tip
+
+## Backup 시나리오
+
+
+
+## Migration 방법
+
+
+
 
 
 
