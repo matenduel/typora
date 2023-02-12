@@ -572,7 +572,7 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 # 8. Schema Registry
 
-
+> 자세한 내용은 `schema registry.md` 참조
 
 
 
@@ -594,9 +594,31 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 ## 11.1. Prometheus & grafana
 
+**사용 목적**
+
+
+
+**장단점**
+
+
+
+**추천하는 Dashboard(Grafana)**
+
+
+
 
 
 ## 11.2. UI for Kafka
+
+**사용 목적**
+
+
+
+**장단점**
+
+
+
+
 
 ### 11.2.1. Installation
 
@@ -612,7 +634,7 @@ helm repo add kafka-ui https://provectus.github.io/kafka-ui
 helm install kafka-ui kafka-ui/kafka-ui --set envs.config.KAFKA_CLUSTERS_0_NAME=local --set envs.config.KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
 ```
 
-## 11.2.2. Configuration(helm chart)
+### 11.2.2. Configuration(helm chart)
 
 > 23년 1월 31일 기준으로 v0.5.0 tag를 사용하면 Google auth Error가 발생하므로 master tag를 사용하여야 한다. 
 
@@ -625,6 +647,18 @@ yamlApplicationConfig:
       - name: <cluster_name>
         bootstrapServers: <broker_urls>
 ```
+
+
+
+**Connect**
+
+
+
+**KSQL**
+
+
+
+**Schema Registry**
 
 
 
@@ -709,6 +743,8 @@ yamlApplicationConfig:
             actions: all
 
 ```
+
+
 
 
 
