@@ -186,20 +186,24 @@ cp <path>/kafka-connect-hdfs-3.0.1-package.jar <plugin_path>
 
 > the code used to translate data between Connect and the system sending or receiving data
 
-Converters are necessary to have a Kafka Connect deployment support a particular data format when writing to or reading from Kafka. Tasks use converters to change the format of data from bytes to a Connect internal data format and vice versa.
+`Converter`는 `Kafka Connect`가 특정 데이터 포맷을 읽거나 쓰기위해 꼭 필요한 요소입니다. `Task`는 `Converter`를 이용하여 `byte`를 특정 데이터 포맷으로 변환하거나, 반대로 `byte`로 변환합니다. (Kafka는 Byte 형태로 데이터를 저장합니다. )
 
-By default, Confluent Platform provides the following converters:
+기본적으로 제공되는 `Converter`는 다음과 같습니다. 
 
-- **AvroConverter** `io.confluent.connect.avro.AvroConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
-- **ProtobufConverter** `io.confluent.connect.protobuf.ProtobufConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
-- **JsonSchemaConverter** `io.confluent.connect.json.JsonSchemaConverter`: use with [Schema Registry](https://docs.confluent.io/platform/7.3/schema-registry/connect.html)
-- **JsonConverter** `org.apache.kafka.connect.json.JsonConverter` (without Schema Registry): use with structured data
-- **StringConverter** `org.apache.kafka.connect.storage.StringConverter`: simple string format
-- **ByteArrayConverter** `org.apache.kafka.connect.converters.ByteArrayConverter`: provides a “pass-through” option that does no conversion
+| 종류                | Data Format | Class Name                                           | Schema Registry |
+| ------------------- | ----------- | ---------------------------------------------------- | --------------- |
+| AvroConverter       | Avro        | `io.confluent.connect.avro.AvroConverter`            | O               |
+| ProtobufConverter   | Protobuf    | `io.confluent.connect.protobuf.ProtobufConverter`    | O               |
+| JsonSchemaConverter | Json        | `io.confluent.connect.json.JsonSchemaConverter`      | O               |
+| JsonConverter       | Json        | `io.confluent.connect.json.JsonConverter`            | X               |
+| StringConverter     | String      | `io.confluent.connect.storage.StringConverter`       | O               |
+| ByteArrayConverter  | ByteArray   | `io.confluent.connect.converters.ByteArrayConverter` | O               |
 
-Converters are decoupled from connectors themselves to allow for reuse of converters between connectors naturally. For example, using the same Avro converter, the JDBC Source Connector can write Avro data to Kafka and the HDFS Sink Connector can read Avro data from Kafka. This means the same converter can be used even though, for example, the JDBC source returns a `ResultSet` that is eventually written to HDFS as a parquet file.
 
-The following graphic shows how converters are used when reading from a database using a JDBC Source Connector, writing to Kafka, and finally, writing to HDFS with an HDFS Sink Connector.
+
+`Converter`는 `Connector`와 분리(Decouple)되어 있으므로 `Connector`와 관계없이 재사용할 수 있습니다. 예를 들어, 동일한 `Avro Converter`를 사용하여 `JDBC Source Connector`에서 원본 데이터를 Avro로 변환하고, 그와 동시에 `HDFS Sink Connector`에서 Avro 데이터를 읽을 수 있습니다.
+
+다음은 `Converter`가 어떠한 형태로 작동하는지를 보여줍니다. 
 
 ![converter-basics](Kafka Connect.assets/converter-basics.png)
 
@@ -405,13 +409,15 @@ consumer.override.<Producer_Config>
 
 
 
-## 3.1. Debezium
+## 3.2. Debezium
 
-### 3.1.1. MongoDB 
+### 3.2.1. MongoDB 
+
+**사전 준비 사항**
+
+
 
 #### Source Connector
-
-
 
 **장점**
 
@@ -500,7 +506,48 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 ### 3.1.2. PostgreSQL 
 
+#### **사전 준비 사항**
+
+- [AWS RDS] `logical_replication` = 1
+  - `SELECT name,setting FROM pg_settings WHERE name IN ('wal_level','rds.logical_replication');`
+- [AWS RDS] `wal_level ` = `logical`
+  - `logical_replication`를 1로 설정하면 자동적으로 설정된다.
+- [AWS RDS] `rds_replication` 권한을 가진 계정 생성
+  - 특정 테이블에 대해 `Snapshot`을 사용하는 경우, 해당 테이블에 `SELECT` 권한 부여가 필요하다. 
+- Plugin 설정
+- 계정 생성
+
+
+
+
+
 #### Source Connector
+
+> https://debezium.io/documentation/reference/stable/connectors/postgresql.html#postgresql-connector-properties
+
+
+
+**Example: **
+
+```json
+{
+  "name": "fulfillment-connector",  
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector", 
+    "database.hostname": "192.168.99.100", 
+    "database.port": "5432", 
+    "database.user": "postgres", 
+    "database.password": "postgres", 
+    "database.dbname" : "postgres", 
+    "topic.prefix": "fulfillment", 
+    "table.include.list": "public.inventory" 
+  }
+}
+```
+
+
+
+
 
 
 
@@ -514,7 +561,7 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 ### 3.2.1. MongoDB 
 
-> docs -> https://www.mongodb.com/docs/kafka-connector/current/
+> https://www.mongodb.com/docs/kafka-connector/current/
 
 #### Source Connector
 
@@ -522,13 +569,39 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 **주요 Configuration**
 
-pipeline
+`pipeline`
 
-change.stream.full.document
+> An array of aggregation pipelines to run in your change stream
+
+- 별도의 `Index`가 설정되어 있지 않으므로, 복잡한 형태의 `$match`는 **지양**하여야 한다. 
+- `_id`에 Resume Token이 기입되어있으므로 제거하여서는 안된다. 
+
+```tex
+# Https를 통해 Conncetor를 설정하는 경우
+[{\"$match\": { \"$and\": [{\"operationType\": \"insert\"}, {\"fullDocument.eventId
+": 1404 }] } }]
+```
 
 
 
-startup.mode.copy.existing.pipeline
+`change.stream.full.document`
+
+> Determines what values your change stream returns on update operations.
+>
+> The default setting returns the differences between the original document and the updated document.
+
+- `updateLookup`
+  -  `document` 변경 내역과 해당 시점의 변경이 반영된 `updated document`를 같이 반환
+- `whenAvailable` 
+  - 가능한 경우 `updated document`를 반환
+- `required`
+  - `updated document`를 반환하지 못하는 경우 `error` 발생
+
+
+
+`startup.mode.copy.existing.pipeline`
+
+>
 
 
 
@@ -536,12 +609,14 @@ startup.mode.copy.existing.pipeline
 
 - `Pipeline`을 이용하여 불필요한 필드를 제거할 수 있다. 
   - MongoDB에서 Project되는 것이므로 Document 사이즈를 줄여 네트워크 비용을 절감할 수 있다. 
+  - `_id`(Resume token)는 변경 불가능하다.
 
 
 
 **주의 사항**
 
-- 현재, Key의 경우 Resume Token이 기입되어있다 -> Value to key를 사용하여 변경해볼 예정
+- 기본적으로 Key에 Resume Token이 기입되어있다.
+- Value to key를 사용하여 Key를 변경하는 경우, Schema Registry가 반 필수로 보인다. 
 
 
 
@@ -583,10 +658,19 @@ startup.mode.copy.existing.pipeline
 
 ## 3.4 주의 사항
 
+**공통**
+
+- Worker의 JVM Heap Memory가 부족한 경우 문제가 발생할 수 있다. 
+
+
+
 **MongoDB**
 
 - Pre image를 사용하는 경우 사실상 Document 사이즈를 8MB이하로 관리하여야한다. 
   - pre + post하는 경우 16MB를 초과할 수 있음
+- 전체 Document를 같이 받는 경우 네트워크 문제가 발생할 수 있으므로, 트랜잭션이 많은 Collection이라면 주의하여야 한다. 
+  - 초당 500개 * 100Kb = 50Mb/s
+
 
 
 
