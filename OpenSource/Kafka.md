@@ -294,6 +294,48 @@ Compact Vs. Delete
 
 ## 4.3. Producer
 
+- max.request.size
+
+`Producer`에서 `kafka(broker)`로 메세지를 전송시 가능한 최대 사이즈(bytes)를 의미한다. 
+
+예를들어 `max.request.size`가 1024KB인 경우, 1KB 메세지를 최대 1024개까지 보낼수 있다. 단, 단일 메세지가 1024KB를 넘는 경우 제한을 넘어서게 되므로 전송에 실패한다. 
+
+관련하여 `broker`에 `message.max.bytes`, `Topic`에  `max.message.bytes` 관련 설정이 존재한다. 
+
+단, 해당 설정값은 압축이 설정된 경우, 압축 후 크기에 적용되지만, `max.request.size`는 압축 전 메세지에 적용되는 제한이라는 차이점이 있다. 
+
+**Kafka Setting: `message.max.bytes` and `fetch.max.bytes`**
+
+The Kafka broker limits the maximum size (total size of messages in a batch, if messages are published in batches) of a message that can be produced, configured by the cluster-wide property `message.max.bytes` (defaults to 1 MB). A producer that tries to send a message larger than this will receive an error back from the broker, and the message will not be accepted. As with all byte sizes specified on the broker, this configuration deals with compressed message size, which means that producers can send messages that are much larger than this value uncompressed, provided they compress it under the configured `message.max.bytes` size.
+
+Note: This setting can be overridden by a specific topic (but with name `max.message.bytes`).
+
+The maximum message size, `message.max.bytes`, configured on the Kafka broker must be coordinated with the cluster-wide property `fetch.max.bytes` (defaults to 1 MB) on consumer clients. It configures the maximum number of bytes of messages to attempt to fetch for a request. If this value is smaller than `message.max.bytes`, then consumers that encounter larger messages will fail to fetch those messages, resulting in a situation where the consumer gets stuck and cannot proceed.
+
+The configuration setting `replica.fetch.max.bytes` (defaults to 1MB) determines the rough amount of memory you will need for each partition on a broker.
+
+**Producer Setting: `max.request.size`**
+
+This setting controls the size of a produce request sent by the producer. It caps both the size of the largest message that can be sent and the number of messages that the producer can send in one request. For example, with a default maximum request size of 1 MB, the largest message you can send is 1MB or the producer can batch 1000 messages of size 1k each into one request.
+
+In addition, the broker has its own limit on the size of the largest message it will accept `message.max.bytes`). It is usually a good idea to have these configurations match, so the producer will not attempt to send messages of a size that will be rejected by the broker.
+
+Note that `message.max.bytes` (broker level) and `max.requrest.size` (producer level) **puts a cap on the maximum size of request in a batch**, but `batch.size` (which should be lower than previous two) and `linger.ms` are the settings which actually **govern the size of the batch**.
+
+**Producer Setting: `batch.size` and `linger.ms`**
+
+When multiple records are sent to the same partition, the producer will batch them together. The parameter `batch.size` controls the maximum amount of memory in bytes (not the number of messages!) that will be used for each batch. If a batch has become full, all the message in the batch has to be sent. This helps in throughput on both the client and the server.
+
+A small batch size will make batching less common and may reduce throughput. A very large size may use memory a bit more wastefully as we will always allocate a buffer of the specified batch size in anticipation of additional messages.
+
+The `linger.ms` (defaults to 0) setting controls the amount of time to wait for additional messages before sending the current batch.
+
+By default, the producer will send messages as soon as there is a sender thread available to send them, even if there's just one message in the batch (note that `batch.size` only specifies the maximum limit on the size of a batch). By setting linger.ms higher than 0, we instruct the producer to wait a few milliseconds to add additional messages to the batch before sending it to the brokers, even if a sender thread is available. This increases latency but also increases throughput (because we send more messages at once, there is less overhead per message).
+
+linger.ms
+
+batch.size
+
 ## 4.4. Consumer
 
 ## 4.5. Admin Client
@@ -303,7 +345,7 @@ Compact Vs. Delete
 ## ACKS
 
 - 0
-  - 프로듀서가 어떤 acks 응답도 기다리지 않는다. 즉, 카프카 서버가 데이터를 받았는지를 보장하지 않았으므로 전송 (요청) 실패에 따른 재요청도 없다.
+  - `Producer`가 어떤 acks 응답도 기다리지 않는다. 즉, 카프카 서버가 데이터를 받았는지를 보장하지 않았으므로 전송 (요청) 실패에 따른 재요청도 없다.
 - 1
   - 리더 노드가 메시지 발행 요청을 받은 건 확인하지만, 팔로워 노드가 그걸 복제해갔는지에 대해선 확인하지 않는다. 속도와 안정성 측면에서 가장 많이 쓰인다고 한다.
 - -1 (all)
@@ -801,9 +843,27 @@ https://data-engineer-tech.tistory.com/11
 
 
 
-# Trouble Shooting
+## Producer 설정 관련 TIP
+
+
+
+
+
+# Trouble Shooting(좌충우돌 경험기)
+
+
 
 ## Session Timeout && Max Polling Interval
+
+
+
+## Cleanup Policy
+
+
+
+## Helm Chart
+
+
 
 
 
