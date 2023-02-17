@@ -674,7 +674,76 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 
 
+# 4. Trouble Shooting(좌충우돌 경험기)
 
+>  문제 -> 해결 방안
+
+## Primary 문제(MongoDB)
+
+1차 테스트때 아무 생각없이 Cluster중에서 하나의 Host만 기입해서 사용했던 상황
+
+-> 작동 불가
+
+
+
+## 압축 관련
+
+producer.overrides.*
+
+
+
+## 메세지 크기관련 에러
+
+broker, Topic, Connector 내에서 메세지 크기 관련 Configuration
+
+![kafka_connect_message_byte_error](Kafka Connect.assets/kafka_connect_message_byte_error.png)
+
+
+
+## JVM Heap Memory 에러
+
+
+
+
+
+## 모니터링 이슈
+
+Prometheus
+
+
+
+## 메세지 발행 관련
+
+linger.ms, batch.size
+
+
+
+## MongoDB Document 사이즈 관련(16 MB 제한)
+
+debezium -> MongoDB Connector
+
+
+
+## 네트워크 사용량 문제
+
+불필요한 Transaction으로 인해 Document를 같이 반환하는 경우 Network 문제로 인해 초당 300개정도의 Messsage만 발행 가능
+
+-> 최소한의 정보 또는 Document없이 Update 내역을 기반으로 이벤트를 트리거링 하고 차후 해당 이벤트를 처리할 때, DB에 쿼리를 날려서 정보 획득
+
+-> 심플한 아키텍처는 아니지만 네트워크 사용량을 최대한 줄일 수 있음. 
+
+
+
+
+
+## Key 교체
+
+
+
+## Transaction 순서 (Change Stream vs OPlog)
+
+Majority-committed Changes
+Replica Set 노드들 중 과반수 이상의 노드에 적용된 변경만을 전달해주기 때문에, 전달받은 변경에 대한 Rollback을 고려할 필요가 없다. 이 특징으로 인해, Replica Set에서 실제로 데이터를 저장하는 Secondary 노드는 동작하지 않고 Arbiter 노드만이 동작하는 상황에서는, Majority-committed가 불가능하기 때문에 Change Stream이 발생하지 않는다.
 
 # Reference
 

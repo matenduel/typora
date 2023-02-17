@@ -2102,6 +2102,44 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 
 
+# Trouble Shooting(좌충우돌 경험기)
+
+## Mono Repo Vs Multi Repo
+
+
+
+## Terraform Cloud를 쓸것인가 말것인가?
+
+
+
+## Multi Workspace
+
+
+
+## Import하기
+
+
+
+## EKS 버젼 업데이트하기
+
+
+
+## Spot Instance 도입기 
+
+
+
+## Launch Template도입기
+
+
+
+## Default Tag 설정하기
+
+
+
+
+
+
+
 # Reference
 
 1. https://developer.hashicorp.com/terraform/cli/commands
