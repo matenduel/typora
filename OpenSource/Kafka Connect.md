@@ -648,6 +648,22 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 
 
+#### Metrics
+
+> https://www.mongodb.com/docs/kafka-connector/current/monitoring/#available-metrics
+
+
+
+**주의사항**
+
+현재 `1.8.0` 버젼의 경우 JMX Exporter시 cast 관련한 Error가 발생한다. 
+
+```text
+SEVERE: JMX scrape failed: java.lang.ClassCastException: java.lang.Long cannot be cast to javax.management.Attribute
+```
+
+
+
 
 
 ## 3.3. Confluent
@@ -680,9 +696,11 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 ## Primary 문제(MongoDB)
 
-1차 테스트때 아무 생각없이 Cluster중에서 하나의 Host만 기입해서 사용했던 상황
+`Snapshot` 또는 `Initial` 작업시 기존 `Document` 정보를 가져오는 것은 `Secondary`에서도 처리할 수 있다. 하지만, `Debezium`의 경우, 변경 데이터를 `Primary`에서만 가져온다. 그러므로, MongoDB가 `Replica Set`으로 구성되어 있는 경우, `Primary`의 host도 같이 적어주어야 한다.
 
--> 작동 불가
+-> 문서 상으로는 seed host를 통해서 primary를 discover 한다고 적혀있으므로, 한번 더 테스트가 필요할 듯.
+
+-> `MongoDB`에서 제공하는 Connector도 유사한 것으로 보인다. (체크 필요)
 
 
 
@@ -696,21 +714,27 @@ producer.overrides.*
 
 broker, Topic, Connector 내에서 메세지 크기 관련 Configuration
 
+
+
+다음은 실제로 `Task`에서 발생한 Message 크기와 관련한 Error 메세지를 캡쳐한 것이다.
+
 ![kafka_connect_message_byte_error](Kafka Connect.assets/kafka_connect_message_byte_error.png)
 
 
 
 ## JVM Heap Memory 에러
 
+`Kafka Connect`는 `Java`를 기반으로 작성된 서비스이므로, `Heap Memory` 설정을 해주어야한다. Connector 및 Task의 상황에 따라 사용량이 달라진다. 현재, 2개의 Connector를 단일 `Worker`에서 실행하였을 때, 2Gb 이상 사용하는 것으로 확인된다. 따라서, `Kafka Connect`를 실제 운영 환경에서 사용하는 경우, Prometheus를 통해서 Heap Memory 사용량을 모니터링해야 한다. 
 
 
 
+## 모니터링(JMX) 관련
 
-## 모니터링 이슈
+`confluent`에서 제공하는 `cp-kafka-connect`를 이용하여 `kafka-connect`를 배포하는 경우, `values.yaml`에서 설정된 default JMX Exporter를 사용하게 된다. 해당 Exporter의 경우 `kafka-connect`에서 제공하는 기본적인 Metric만 제공하므로, Debezium이나 MongoDB에서 제공하는 Connector의 상세 Metrics를 확인할 수 없다. 따라서, helm chart 내에 있는 config map을 수정하여 사용하거나 별도의 JMX Exporter Image를 사용하여야 한다. 
 
-Prometheus
+Rule 설정을 위한 Metric의 상세한 정보는 `Jconsole`를 이용하여 `Mbean`의 자세한 정보를 확인할 수 있다. 다음은 MongoDB Source Connector에서 제공하는 `Metric`을 `Jconsole`을 사용하여 확인한 화면이다.
 
-
+![MongoDB_connector_mbean](./Kafka Connect.assets/MongoDB_connector_mbean.png)
 
 ## 메세지 발행 관련
 
