@@ -704,24 +704,6 @@ SEVERE: JMX scrape failed: java.lang.ClassCastException: java.lang.Long cannot b
 
 
 
-## 압축 관련
-
-producer.overrides.*
-
-
-
-## 메세지 크기관련 에러
-
-broker, Topic, Connector 내에서 메세지 크기 관련 Configuration
-
-
-
-다음은 실제로 `Task`에서 발생한 Message 크기와 관련한 Error 메세지를 캡쳐한 것이다.
-
-![kafka_connect_message_byte_error](Kafka Connect.assets/kafka_connect_message_byte_error.png)
-
-
-
 ## JVM Heap Memory 에러
 
 `Kafka Connect`는 `Java`를 기반으로 작성된 서비스이므로, `Heap Memory` 설정을 해주어야한다. Connector 및 Task의 상황에 따라 사용량이 달라진다. 현재, 2개의 Connector를 단일 `Worker`에서 실행하였을 때, 2Gb 이상 사용하는 것으로 확인된다. 따라서, `Kafka Connect`를 실제 운영 환경에서 사용하는 경우, Prometheus를 통해서 Heap Memory 사용량을 모니터링해야 한다. 
@@ -736,9 +718,43 @@ Rule 설정을 위한 Metric의 상세한 정보는 `Jconsole`를 이용하여 `
 
 ![MongoDB_connector_mbean](./Kafka Connect.assets/MongoDB_connector_mbean.png)
 
-## 메세지 발행 관련
+## 메세지 처리량 관련
 
-linger.ms, batch.size
+`Source Connector`는 당연하게도 `Producer`를 사용하여 메세지 발행합니다. 따라서, 초당 수백건 이상의 메세지를 처리해야한다면 `producer`의 `linger.ms`와 `batch.size`를 설정하여야 합니다. `producer`와 관련하여 별도의 설정을 하지 않는다면 메세지를 단건으로 처리하게 되므로, 메세지 크기에 따라 다르지만, `Connector`당 평균 20~30개 정도의 초당 처리량을 가집니다. 이 경우, 대량의 `transaction`이 발생하게 되면 `lag`이 급증할 수 있으므로, 가급적 `linger.ms`와 `batch.size`를 설정하는 것이 좋습니다. 
+
+추가로, 메세지를 압축(`compression.type`)하는 경우, 네트워크 비용이 감소하므로 메세지 발행량을 증가시킬 수 있습니다. 압축 효율과 관련된 benchmark 및 자세한 내용은 [링크](https://medium.com/@prasanta.mohanty/bench-marking-standards-for-kafka-compression-9d9a46d22ce0)에서 확인할 수 있습니다.  
+
+
+
+## 메세지 사이즈 관련
+
+`max.request.size`는 `request` 1회당 전송할 수 있는 최대 사이즈를 의미한다. 
+
+예를들어 `max.request.size`가 1000KB로 설정되어있다면, 1KB 크기의 메세지를 1000개까지, 100KB 크기 메세지는 10개, 1000KB 메세지는 1개까지 전송할 수 있다. 
+
+따라서, 만일 단일 메세지가 `max.request.size`를 초과한다면 상한을 초과하게 되므로 전송에 실패한다. 
+
+`max.request.size`는 압축전 크기를 기반으로 작동하므로 주의하여야 한다. 
+
+
+
+`batch.size`는 `batch`를 위한 최소 단위를 설정한다면, `max.request.size`는 최대 사이즈를 설정한다고 볼 수 있다. 하지만, `batch.size`의 경우, 그보다 작은 사이즈여도 관계가 없는 반면에, `max.request.size`는 초과하게 되는 경우 무조건 에러가 반환된다는 점에서 주의가 필요하다. 
+
+
+
+`max.request.size` - producer (before compression)
+
+`message.max.bytes` - broker (after compression)
+
+`max.message.bytes` - topic (after compression)
+
+
+
+다음은 실제로 `Task`에서 발생한 Message size와 관련된 에러 메세지를 캡쳐한 것이다.
+
+![kafka_connect_message_byte_error](Kafka Connect.assets/kafka_connect_message_byte_error.png)
+
+
 
 
 
