@@ -145,6 +145,18 @@ Prometheus provides useful functions for counter metrics such as [rate()](https:
 
 Important note: `increase()` and `rate()` functions expect only counters as their input. If you pass non-counter time series to these functions, then they may return unexpected (aka garbage) results.
 
+
+
+## Range Vector
+
+
+
+## Instant Vector
+
+
+
+
+
 # JMX Exporter
 
 > Repository: https://github.com/prometheus/jmx_exporter
@@ -688,17 +700,67 @@ All other operators do not behave in a meaningful way. They either treat the his
 
 ### increase
 
+`increase`는 `range vector`내의 `time series`의 증분을 계산합니다. `increase`는 지정된 `range vector`의 전체 시간 범위에 대해 외삽(추정)하므로, `counter`와 같은 정수 형태의 값을 대상으로 사용하더라도 실수가 반환될 수 있습니다. 
+
+The following example expression returns the number of HTTP requests as measured over the last 5 minutes, per time series in the range vector:
+
+```
+increase(http_requests_total{job="api-server"}[5m])
+```
 
 
-### irate
+
+
+
+`increase(v range-vector)` calculates the increase in the time series in the range vector. Breaks in monotonicity (such as counter resets due to target restarts) are automatically adjusted for. The increase is extrapolated to cover the full time range as specified in the range vector selector, so that it is possible to get a non-integer result even if a counter increases only by integer increments.
+
+The following example expression returns the number of HTTP requests as measured over the last 5 minutes, per time series in the range vector:
+
+```
+increase(http_requests_total{job="api-server"}[5m])
+```
+
+`increase` acts on native histograms by calculating a new histogram where each compononent (sum and count of observations, buckets) is the increase between the respective component in the first and last native histogram in `v`. However, each element in `v` that contains a mix of float and native histogram samples within the range, will be missing from the result vector.
+
+`increase` should only be used with counters and native histograms where the components behave like counters. It is syntactic sugar for `rate(v)` multiplied by the number of seconds under the specified time range window, and should be used primarily for human readability. Use `rate` in recording rules so that increases are tracked consistently on a per-second basis.
 
 
 
 ### rate
 
+`rate`는 `range vector`내의 `time series`의 증분을 기반으로 초당 평균 증가량을 계산합니다. 
 
 
-### vector
+
+`rate(v range-vector)` calculates the per-second average rate of increase of the time series in the range vector. Breaks in monotonicity (such as counter resets due to target restarts) are automatically adjusted for. Also, the calculation extrapolates to the ends of the time range, allowing for missed scrapes or imperfect alignment of scrape cycles with the range's time period.
+
+The following example expression returns the per-second rate of HTTP requests as measured over the last 5 minutes, per time series in the range vector:
+
+```
+rate(http_requests_total{job="api-server"}[5m])
+```
+
+`rate` acts on native histograms by calculating a new histogram where each compononent (sum and count of observations, buckets) is the rate of increase between the respective component in the first and last native histogram in `v`. However, each element in `v` that contains a mix of float and native histogram samples within the range, will be missing from the result vector.
+
+`rate` should only be used with counters and native histograms where the components behave like counters. It is best suited for alerting, and for graphing of slow-moving counters.
+
+Note that when combining `rate()` with an aggregation operator (e.g. `sum()`) or a function aggregating over time (any function ending in `_over_time`), always take a `rate()` first, then aggregate. Otherwise `rate()` cannot detect counter resets when your target restarts.
+
+
+
+### irate
+
+`irate(v range-vector)` calculates the per-second instant rate of increase of the time series in the range vector. This is based on the last two data points. Breaks in monotonicity (such as counter resets due to target restarts) are automatically adjusted for.
+
+The following example expression returns the per-second rate of HTTP requests looking up to 5 minutes back for the two most recent data points, per time series in the range vector:
+
+```
+irate(http_requests_total{job="api-server"}[5m])
+```
+
+`irate` should only be used when graphing volatile, fast-moving counters. Use `rate` for alerts and slow-moving counters, as brief changes in the rate can reset the `FOR` clause and graphs consisting entirely of rare spikes are hard to read.
+
+Note that when combining `irate()` with an [aggregation operator](https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators) (e.g. `sum()`) or a function aggregating over time (any function ending in `_over_time`), always take a `irate()` first, then aggregate. Otherwise `irate()` cannot detect counter resets when your target restarts.
 
 
 
