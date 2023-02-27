@@ -565,9 +565,29 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 #### Source Connector
 
+#### 
+
+**주요 Configuration - MongoClient**
+
+`readPreference`
+
+> describe the behavior of read operations with regards to [replica sets](https://www.mongodb.com/docs/manual/reference/glossary/#std-term-replica-set)
+
+- 어떤 Node를 사용하여 처리할 것인지에 대한 옵션을 정의한다.
 
 
-**주요 Configuration**
+
+`compressors`
+
+> Comma-delimited string of compressors to enable network compression for communication between this client and a [`mongod`](https://www.mongodb.com/docs/manual/reference/program/mongod/#mongodb-binary-bin.mongod) / [`mongos`](https://www.mongodb.com/docs/manual/reference/program/mongos/#mongodb-binary-bin.mongos) instance.
+
+- Client와 Mongod 사이의 통신 과정에서 사용할 압축 형식을 정의한다.
+- `snappy`, `zlib`, `zstd`
+- 압축을 지정하지 않은 경우, `Snapshot`시 과도한 네트워크 트래픽이 발생할 수 있다. 
+
+
+
+**주요 Configuration - Connector**
 
 `pipeline`
 
@@ -696,11 +716,11 @@ SEVERE: JMX scrape failed: java.lang.ClassCastException: java.lang.Long cannot b
 
 ## Primary 문제(MongoDB)
 
-`Snapshot` 또는 `Initial` 작업시 기존 `Document` 정보를 가져오는 것은 `Secondary`에서도 처리할 수 있다. 하지만, `Debezium`의 경우, 변경 데이터를 `Primary`에서만 가져온다. 그러므로, MongoDB가 `Replica Set`으로 구성되어 있는 경우, `Primary`의 host도 같이 적어주어야 한다.
+`Snapshot` 또는 `Initial` 작업시 기존 `Document` 정보를 가져오는 것은 `Secondary`에서도 처리할 수 있다. 
 
--> 문서 상으로는 seed host를 통해서 primary를 discover 한다고 적혀있으므로, 한번 더 테스트가 필요할 듯.
+하지만, `Debezium`의 경우 `Primary`에서 데이터를 처리하므로 MongoDB가 `Replica Set`으로 구성되어 있는 경우, `Primary`의 host도 같이 적어주어야 한다.
 
--> `MongoDB`에서 제공하는 Connector도 유사한 것으로 보인다. (체크 필요)
+`MongoDB Kafka Connector`의 경우, `Change Stream` 를 사용하여 데이터를 처리하므로 `Secondary`에서도 사용 가능하다!
 
 
 
