@@ -36,6 +36,14 @@ https://tommypagy.tistory.com/106
 
 
 
+# Load Balancer
+
+- ALB
+    - EKS Ingress에서 `group.name`을 사용하면 Ingress마다 ALB가 생성되지 않고 하나의 ALB로 병합되어 처리된다. 
+    - Rule내에서 복수개의 Source ip 제한을 설정할 수 없다. (추가 확인 필요)
+- NLB
+- Classic
+
 
 
 # Security Group
