@@ -565,7 +565,7 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 #### Source Connector
 
-#### 
+
 
 **주요 Configuration - MongoClient**
 
@@ -584,6 +584,18 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 - Client와 Mongod 사이의 통신 과정에서 사용할 압축 형식을 정의한다.
 - `snappy`, `zlib`, `zstd`
 - 압축을 지정하지 않은 경우, `Snapshot`시 과도한 네트워크 트래픽이 발생할 수 있다. 
+
+
+
+**Example - MongoClient**
+
+```json
+{
+  "connection.uri": "mongodb://<username>:<password>@<host1>:27017,<host2>:27017,<host3>:27017/?compressors=zstd,snapply&readPreference=secondaryPreferred",
+}
+```
+
+
 
 
 
@@ -622,6 +634,25 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 `startup.mode.copy.existing.pipeline`
 
 >
+
+
+
+`output.schema.key`
+
+> Specifies an AVRO schema definition for the key document of the [SourceRecord](https://kafka.apache.org/32/javadoc/org/apache/kafka/connect/source/SourceRecord.html).
+
+- Schema 설정을 통해서 `_id`에 `resume token`이 아닌 다른 값을 기입할 수 있다. 
+- key schema를 설정하지 않을 경우, `unique`한 `resume token`이 매번 기입되므로 동일한 문서(`document_id`)에서 발생한 변경사항이 동일 파티션으로 전송되지 않는다. 
+
+```json
+{
+  "type": "record",
+  "name": "keySchema",
+  "fields" : [ { "name": "_id", "type": "string" } ]"
+}
+```
+
+
 
 
 
@@ -784,19 +815,86 @@ debezium -> MongoDB Connector
 
 
 
-## 네트워크 사용량 문제
+## 네트워크 사용량 문제(MongoDB)
 
-불필요한 Transaction으로 인해 Document를 같이 반환하는 경우 Network 문제로 인해 초당 300개정도의 Messsage만 발행 가능
+ `Document`의 사이즈가 클 수록 Network 문제로 인해 `Lag`이 증가할 수 있다. 
 
--> 최소한의 정보 또는 Document없이 Update 내역을 기반으로 이벤트를 트리거링 하고 차후 해당 이벤트를 처리할 때, DB에 쿼리를 날려서 정보 획득
+특히, `list`로 저장된 값을 `slice`하는 경우, 변경된 전체 리스트의 모든 element에 대해서  다시  `set`이 이루어지므로 ChangeStream에서 반환되는 문서의 사이즈가 생각보다 더 클 수 잇다. 
 
--> 심플한 아키텍처는 아니지만 네트워크 사용량을 최대한 줄일 수 있음. 
+
+
+이를 해결하기 위한 2가지 방안
+
+1. `fullDocument`을 사용하지 않는다. 
+2. `pipeline`을 사용하여 필요한 `field`만 가져온다.
+
+
+
+1번의 경우, 메세지의 크기를 최소화할 수 있으므로 대량의 Transaction도 문제없이 처리 가능하다. 하지만, 해당 Message내 정보가 부족하므로 일부 스트림 파이프라인의 경우, 별도의 쿼리를 통해 데이터 처리를 위한 추가 정보를 가져와야 할 수 있다. (Message만을 가지고 스트림 파이프라인을 운영할 수 없는 경우가 많다.)
+
+EX) 상태가 변경된 주문의 상품 정보가 필요한 경우, ...
+
+
+
+2번의 경우, Messsage 내 불필요한 데이터를 제거하여 사용.
+
+스트림 파이프라인에서 DB 조회 없이 데이터 또는 이벤트를 처리할 수 있음.
+
+스트림 파이프라인이 변경되어 추가 필드가 필요한 경우, 매번 connector 설정을 변경하여야함. 
+
+
+
+
+
+`Pipeline` 쿼리를 사용하여 `updateDescription.updatedFields`의 key만 가져오도록 설정하여 해결함
+
+-> `updateLookup`을 사용하는 경우`updatedFields` 변경사항이 반영된  fullDocument가 반환되므로 value가 없어도 변경된 값을 확인할 수 있음.
+
+```json
+# Before
+{
+  ...,
+  "updateDescription": {
+		"removedFields": [],
+		"updatedFields": {
+			"field_name1.1": "value1",
+			"field_name2": "value2",
+			"field_name3": "value3",
+			"field_name4": "value4"
+		}
+	}
+}
+
+# After
+{
+  ...,
+  "updateDescription": {
+		"removedFields": [],
+		"updateFieldKeys": [
+			"field_name1.1",
+			"field_name2",
+			"field_name3",
+			"field_name4"
+		]
+	}
+}
+```
+
+
 
 
 
 
 
 ## Key 교체
+
+**MongoDB Connector**
+
+`output.schema.key`를 사용하여 Message의 Key를 변경할 수 있다. 
+
+
+
+**Debezium Connector**
 
 
 
