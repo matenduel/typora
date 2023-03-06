@@ -338,6 +338,20 @@ batch.size
 
 ## 4.4. Consumer
 
+`request.timeout.ms`
+
+`consumer`가 응답을 받을때까지 대기할 수 있는 최대 시간
+
+
+
+`fetch.max.wait.ms`
+
+`broker`에서  `fetch.min.bytes`를 충족할때까지 기다릴 수 있는 최대 시간
+
+
+
+
+
 ## 4.5. Admin Client
 
 
