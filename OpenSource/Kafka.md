@@ -386,24 +386,24 @@ The documentation of `retries`, sheds some more light (and clarifies that is per
 
 > Setting a value greater than zero will cause the client to resend any record whose send fails with a potentially transient error. Note that this retry is no different than if the client resent the record upon receiving the error. Allowing retries without setting max.in.flight.requests.per.connection to 1 will potentially change the ordering of records because if two batches are sent to a single partition, and the first fails and is retried but the second succeeds, then the records in the second batch may appear first. Note additionally that produce requests will be failed before the number of retries has been exhausted if the timeout configured by [delivery.timeout.ms](http://delivery.timeout.ms) expires first before successful acknowledgement. Users should generally prefer to leave this config unset and instead use [delivery.timeout.ms](http://delivery.timeout.ms) to control retry behavior.
 
-## heartbeat_interval_ms
+## heartbeat.interval.ms
 
 - 그룹 코디네이터에게 얼마나 자주 KafkaConsumer poll() 메소드로 하트비트를 보낼것인지 조정
 - session.timeout.ms보다 낮아야 하고 일반적으론 1/3 정도로 설정
 - Python에서 메세지를 처리하는 중에도 별도의 Thread?를 통해서 heartbeat 체크를 진행함
 
-## session_timeout_ms
+## session.timeout.ms
 
 - 카프카 브로커가 컨슈머에게 장애가 생겼다고 판단하는데 걸리는 시간
 - 컨슈머는 주기적으로 그룹 코디네이터에게 하트비트를 전송해 자신이 살아있음을 알림
 - 컨슈머가 그룹 코디네이터에게 하트비트를 보내지 않고 session.timeout.ms가 지나면 리밸런싱
 - 값이 작은 경우 이상상황 빠르게 감지. 불필요한 리밸런싱이 자주 발생
 
-## request_timeout_ms
+## request.timeout.ms
 
 • 요청에 대해 응답을 기다리는 최대 시간
 
-## max_poll_interval_ms
+## max.poll.interval.ms
 
 ![Poll_interval](Kafka.assets/Poll_interval.png)
 
@@ -411,9 +411,9 @@ The documentation of `retries`, sheds some more light (and clarifies that is per
 - 하지만 컨슈머 클라이언트가 클러스터에 heartbeat 는 보내지만 실제 데이터는 읽어가지 않는 상황이 길어질 경우, **파티션이 무한정으로 점유**될 수 있다.
 - **이 같은 상황을 방지하기 위해 이 설정을 추가**하여, 해당 값 (시간) 이 만료될 때 까지 message polling 을 시도하지 않는다면 컨슈머 그룹 구성에 변화가 생겼음 (해당 컨슈머가 장애라고 판단하고 그룹에서 제외시킬 수 있다) 을 인지할 수 있도록 한다.
 
-## consumer_timeout_ms
+## consumer.timeout.ms
 
-## max_poll_records
+## max.poll.records
 
 - 컨슈머 클라이언트가 특정 토픽을 구독한 뒤부터 poll 작업이 이루어질 수 있는데, 이 때 **`poll()` 한 번에 따라 가져올 수 있는 최대 레코드 수**를 지정한다.
 - 이 때 카프카를 사용하는 애플리케이션에서는 `poll` 메소드를 호출해서 레코드를 가져오고, 특정 스레드에서 그걸 전부 처리해준 뒤 다시 `poll` 메소드를 호출해 새로운 레코드를 가져오게 된다.
@@ -652,6 +652,8 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 **사용 목적**
 
+- `Kafka` 인스턴스의 자원 사용량과 Topic, Message 발행량, 소비량등을 수집하여 시각화
+
 
 
 **장단점**
@@ -667,6 +669,8 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 ## 11.2. UI for Kafka
 
 **사용 목적**
+
+- Kafka Topic 설정 및 Message 관리 및 수동 발행
 
 
 
@@ -707,6 +711,17 @@ yamlApplicationConfig:
 
 
 **Connect**
+
+```yaml
+yamlApplicationConfig:
+  kafka:
+    clusters:
+      - name: <cluster_name>
+        bootstrapServers: <broker_urls>
+        kafkaconnect:
+          - name: <connect_name>
+            address: "http://<domain"
+```
 
 
 
