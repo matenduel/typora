@@ -1022,6 +1022,100 @@ Refer to [Custom Condition Checks](https://developer.hashicorp.com/terraform/lan
 
 ## Dynamic Blocks
 
+`resource`와 같은 `top-level` 블록은 일반적으로 변수에 값을 할당하는 `name = expression`형태를 주로 사용합니다. 하지만 일부 `resource`의 경우 다음과 같이 중첩 블록(`nested blocks`)의 형태로 자원을 정의합니다. 
+
+**Example - nested block**
+
+```hcl
+resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
+  bucket = <bucket_name>  # can use expressions here
+  
+  rule {
+  	id     = <rule1>
+    status = "Enabled"
+		...
+  }  
+  
+  rule {
+  	id     = <rule2>
+    status = "Enabled"
+		...
+		# but the "rule" block is always a literal block
+  }
+}
+```
+
+
+
+`resource`, `data`, `provider`, `provisioner` 블록 내에서 `rule`과 같이 반복되는 블록을 `dynamic` 블록 타입을 이용하여 동적으로 만들 수 있습니다. 위에 적혀있는 Example은 다음과 같이 작성할 수 있습니다. 
+
+**Example - nested block with dynamic**
+
+```hcl
+resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
+  bucket = <bucket_name>  # can use expressions here
+
+  dynamic "rule" {
+    for_each = toset([<rule1>, <rule2>])  # Map or Set
+    content {
+      id     = "${rule.value}"  # key or value
+      status = "Enabled"
+			...
+    }
+  }
+}
+```
+
+`dynamic` 블록은 마치 `for`처럼 작동하지만, `value`가 아니라 중첩 블록(`nested blocks`)을 생성한다는 것이 다릅니다. 단, `dynamic` 블록은 `resource`, `provider`등에 속해있는 `Argument`만 생성할 수 있으며, `lifecycle`, `provisioner`와 같은 `meta-argument` 블록은 생성할 수 없습니다. 
+
+
+
+`dynamic` 블록은 다음과 같이 구성되어 있습니다. 
+
+```
+dynamic "<label>" {
+  for_each = "<Iterable>"  # Map or Set
+  iterator = "<name>"  # Optional
+  content {
+  	# Access the element data by using label name
+    id     = "${<name>.value}"  # key or value
+    status = "${<name>.key}"  # key or value
+    ...
+  }
+}
+```
+
+- <label>은 생성할 블록의 유형을 나타냅니다. 
+    - aws_s3_bucket_lifecycle_configuration - rule
+    - aws_route_table - route  
+- `for_each`에는 반복 가능한 객체(`map`, `set`, ...)가 전달됩니다. 
+- `iterator`는 현재의 요소(`element`)를 호출하기 위한 이름을 나타냅니다. 만약 정의하지 않은 경우, 기본적으로 <lable>이 사용됩니다. 
+- `content` 블록은 생성될 블록의 내용을 의미합니다. 
+
+
+
+Since the `for_each` argument accepts any collection or structural value, you can use a `for` expression or splat expression to transform an existing collection.
+
+
+
+추가로 `iterator`로 정의된 각 요소(`item`, `element`)들은 2개의 속성을 가지고 있습니다. 
+
+- `key`
+    - `for_each`에 전달된 데이터의 유형에 따라 각기 다른 값을 의미합니다. 
+    - `map`의 경우 key를 의미합니다. 
+    - `list`의 경우 각 요소의 `index`를 의미합니다. 
+    - `set`의 경우 value와 동일한 값이 반환됩니다. 
+- `value`
+    - 현재 선택된 요소의 값을 나타냅니다 
+
+
+
+
+
+The `for_each` value must be a collection with one element per desired nested block. If you need to declare resource instances based on a nested data structure or combinations of elements from multiple data structures you can use Terraform expressions and functions to derive a suitable value. For some common examples of such situations, see the [`flatten`](https://developer.hashicorp.com/terraform/language/v1.3.x/functions/flatten) and [`setproduct`](https://developer.hashicorp.com/terraform/language/v1.3.x/functions/setproduct) functions.
+
+
+
 
 
 ## Custom Condition Checks
@@ -1323,9 +1417,82 @@ TODO - 표를 이용한 도식화
 
 기본적으로 모든 리소스가 가지고 있는 count 파라미터를 이용하 반복되는 리소스를 간단하게 생성할 수 있습니다. count 에 부여한 숫자만큼, 리소스는 반복되어 생성되고 자동으로 테라폼내에서 resource_name[0] 처럼 리스트화 됩니다.
 
+
+
 ### 6.1.3. for_each
 
 > **Version note:** `for_each` was added in Terraform 0.12.6. Module support for `for_each` was added in Terraform 0.13; previous versions can only use it with resources.
+>
+> https://developer.hashicorp.com/terraform/language/meta-arguments/for_each
+
+**The `each` Object**
+
+In blocks where `for_each` is set, an additional `each` object is available in expressions, so you can modify the configuration of each instance. This object has two attributes:
+
+- [`each.key`](https://developer.hashicorp.com/terraform/language/meta-arguments/for_each#each-key) — The map key (or set member) corresponding to this instance.
+- [`each.value`](https://developer.hashicorp.com/terraform/language/meta-arguments/for_each#each-value) — The map value corresponding to this instance. (If a set was provided, this is the same as `each.key`.)
+
+
+
+**Example - module**
+
+```
+resource "aws_s3_bucket_lifecycle_configuration" "feed_bucket_with_domain_lifecycle" {
+  bucket = aws_s3_bucket.feed_bucket_with_domain.id
+
+  # To remove the old version
+  dynamic "rule" {
+    for_each = toset(["moloco", "criteo", "facebook"])  # Map or Set
+    content {
+      id     = "${rule.value}_feed_version_control"
+      status = "Enabled"
+
+      filter {
+        prefix = "${rule.value}/"
+      }
+
+      noncurrent_version_expiration {
+        newer_noncurrent_versions = 7
+        noncurrent_days = 3
+      }
+    }
+  }
+}
+```
+
+
+
+**Example - with dynamic block**
+
+```
+resource "aws_s3_bucket_lifecycle_configuration" "feed_bucket_with_domain_lifecycle" {
+  bucket = aws_s3_bucket.feed_bucket_with_domain.id
+
+  # To remove the old version
+  dynamic "rule" {
+    for_each = toset(["moloco", "criteo", "facebook"])  # Map or Set
+    content {
+      id     = "${rule.value}_feed_version_control"
+      status = "Enabled"
+
+      filter {
+        prefix = "${rule.value}/"
+      }
+
+      noncurrent_version_expiration {
+        newer_noncurrent_versions = 7
+        noncurrent_days = 3
+      }
+    }
+  }
+}
+```
+
+
+
+
+
+
 
 ### 6.1.4. provider
 
