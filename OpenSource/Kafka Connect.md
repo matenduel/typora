@@ -413,7 +413,15 @@ consumer.override.<Producer_Config>
 
 ### 3.2.1. MongoDB 
 
-**사전 준비 사항**
+#### **사전 준비 사항**
+
+**Required**
+
+
+
+**Optional**
+
+- 
 
 
 
@@ -668,6 +676,10 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 - 기본적으로 Key에 Resume Token이 기입되어있다.
 - Value to key를 사용하여 Key를 변경하는 경우, Schema Registry가 반 필수로 보인다. 
+- `lookup`의 경우, 현재의 `document`를 반환하는 것으로 보인다. 따라서, `connector`를 처음 시작하거나 하는 경우, 반환되는 `full_document`는 `update`직후의 모습과 다를 수 있다. 
+  - ex) `update` -> `delete` -> `lookup` 인 경우, `update` event에서 `full_document`는 `null`이 반환된다. 
+  - `connector`를 실행한 경우 해당 상황이 발생할 여지가 크므로 해당 내용을 감안하여 SMT 또는 pipeline을 설계, 구축하여야 한다. 
+
 
 
 
@@ -707,7 +719,8 @@ Caused by: com.mongodb.MongoQueryException: Query failed with error code 10334 w
 
 **주의사항**
 
-현재 `1.8.0` 버젼의 경우 JMX Exporter시 cast 관련한 Error가 발생한다. 
+- `1.8.0` 버젼의 경우 JMX Exporter시 cast 관련한 Error가 발생한다. 
+  - `1.8.1`버젼 이상을 사용하도록 하자
 
 ```text
 SEVERE: JMX scrape failed: java.lang.ClassCastException: java.lang.Long cannot be cast to javax.management.Attribute
@@ -819,7 +832,7 @@ debezium -> MongoDB Connector
 
  `Document`의 사이즈가 클 수록 Network 문제로 인해 `Lag`이 증가할 수 있다. 
 
-특히, `list`로 저장된 값을 `slice`하는 경우, 변경된 전체 리스트의 모든 element에 대해서  다시  `set`이 이루어지므로 ChangeStream에서 반환되는 문서의 사이즈가 생각보다 더 클 수 잇다. 
+특히, `list`로 저장된 값을 `slice`하는 경우, 변경된 전체 리스트의 모든 element에 대해서  다시  `set`이 이루어지므로 ChangeStream에서 반환되는 문서의 사이즈가 생각보다 더 클 수 있다. 
 
 
 
