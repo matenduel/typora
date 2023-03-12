@@ -499,6 +499,12 @@ Kafka가 Rebalancing 되는 과정 중에서는 모든 Consuming( Data Fetching 
 
 > bitnamin/kafka → `opt/bitnami/kafka/bin/`
 
+**주의사항**
+
+- `JMX_EXPORTER`가 설정되어있는 경우, `port` 문제로 인해 CLI 명령이 실행되지 않을 수 있다. 이 경우, `export JMX_PORT=5557`처럼 사용하고 있지 않은 Port를 설정해준 다음 실행하면 된다. 
+
+
+
 ## 6.1. Topic
 
 ### 목록
@@ -583,10 +589,6 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 
-# 
-
-
-
 # 7. Kafka Connect
 
 > 자세한 내용은 `kafka connect.md` 참조
@@ -634,13 +636,13 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 # 9. Kafka Streams
 
-
+> 
 
 
 
 # 10. KSQL DB
 
-
+> 
 
 
 
@@ -656,11 +658,22 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 
 
-**장단점**
+**장점**
+
+- Kafka 인스턴스 및 메세지 소비, 발행량과 관련하여 시간에 따른 추이를 확인할 수 있다. 
 
 
 
-**추천하는 Dashboard(Grafana)**
+**단점**
+
+- JMX Exporter로 수집되지 않는 정보의 경우 확인할 수 없다. 
+  - ex) Configuration, ...
+
+
+
+**Grafana Dashboard 예시**
+
+> https://github.com/matenduel/grafana_dashboards
 
 
 
@@ -670,13 +683,23 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group <group_name> 
 
 **사용 목적**
 
-- Kafka Topic 설정 및 Message 관리 및 수동 발행
+- Kafka 설정
+- Topic, Message 및 Consumer Group 관리
 
 
 
-**장단점**
+**장점**
+
+- Kafka의 configuration 수정 가능
+- Kafka Consumer의 member와 같은 자세한 정보 확인 가능
+- Message 수동 발행 가능
+- Kafka Connect, Ksql, Schema registry 연결 가능
 
 
+
+**단점**
+
+- 전반적인 상황을 한눈에 확인하기는 힘들다. 
 
 
 
@@ -890,7 +913,24 @@ https://data-engineer-tech.tistory.com/11
 
 
 
-## Helm Chart
+## Consumer Offset 변경하기
+
+**목적**
+
+- `Lambda` 아키텍처와 같이 `batch` 파이프라인과 `Stream` 파이프라인을 같이 운영하는 경우, 데이터 처리에 걸리는 시간이 달라서 DW에 과거 값이 기입될 수 있다. 
+- 따라서 `batch` 파이프라인이 작동된 후 `Stream` 파이프라인의 `offset`을 조정하거나, `Stream` 파이프라인을 멈춰야 한다. 
+
+
+
+**해결 방안**
+
+- API를 통해서 `Consumer Group`에 할당되어 있는 `Member`를 정지 시킨 뒤, `offset`을 조정한다. 
+
+
+
+## Consumer Group - Static Member
+
+> https://cwiki.apache.org/confluence/display/KAFKA/KIP-345%3A+Introduce+static+membership+protocol+to+reduce+consumer+rebalances
 
 
 
