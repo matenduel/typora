@@ -2285,6 +2285,22 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 ## Import하기
 
+**문제점**
+
+Terraform 도입과정에서 일정으로 인해서 S3, ECR등 일부 리소스를 AWS 콘솔을 이용하여 전개. 
+
+이렇게 되면 일부 환경에서만 일부 리소스의 코드가 누락되므로 DR이나 유지보수면에서 혼란을 야기함. 
+
+그렇다고 기존에 사용중인 리소스를 삭제한 다음 Terraform으로 다시 전개하는 것은 불필요한 중단을 야기할 수 있으며, 기존 설정과 100% 동일한 설정값이 작성되었는지 체크할 수 없음
+
+
+
+**해결방안**
+
+`import` 기능을 활용하여 기존의 Resource를 테라폼 코드로 변환함
+
+단, Terraform Cloud를 사용하는 경우, `apply`, `plan`과 다르게 Cloud에 세팅되어있는 `variables set`등을 가져오지 못하므로(Local에서 작업이 실행됨) Terraform 코드 내에서 사용하는 variables를 `.tfvars`로 작성하여 사용하여야 한다. 
+
 
 
 ## EKS 버젼 업데이트하기
@@ -2301,7 +2317,19 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 ## Default Tag 설정하기
 
+**문제점**
 
+Terraform을 통해 전개 및 관리되고 있는 리소스와 테스트 등을 위해 Console에서 전개한 리소스를 구분하기 위해서 terraform을 통해 전개된 모든 리소스의 tags를 `by_terraform=true`로 작성하고 있었음
+
+하지만 Module을 통해 전개된 일부 리소스나 휴먼 에러등으로 인해 일부 리소스들의 tag가 설정되지 않았고, 불편함
+
+
+
+**해결방안**
+
+`provider` 내부에 `default_tags`를 선언하여 해당 `provider`를 통해 전개된 모든 리소스에 자동적으로 `tags`가 기입되도록 처리함
+
+단, 이 경우 plan을 보게되면 `tags_all`로 처리되다 보니 리소스의 `tags`에도 동일한 이름의 `tag`가 기입된 경우 처리 순서로 인해 일부 태그가 적용이 되지 않은 것으로 인식될 수 있다. 따라서, `apply` 후 다시 `plan`을 하게 되었을 때, 변경사항이 없음에도 `tag`와 관련하여 변경사항이 존재한다고 나올 수 있으므로 가급적 이름을 다르게 작성하는 것이 좋다. 
 
 
 
