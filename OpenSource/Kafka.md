@@ -350,6 +350,14 @@ batch.size
 
 
 
+### enable.auto.commit (default=true)
+
+- true일 경우 백그라운드로 주기적으로 오프셋을 커밋
+- true일 경우 편리하지만 데이터 누락이나 중복 처리가 발생할 수 있음
+- poll(), close() 메서드 호출시 자동 커밋 실행
+- [auto.commit.interval.ms](http://auto.commit.interval.ms): 자동 커밋 주기
+- false 일 경우 : commitSync() - 동기, commitAsync() - 비동기로 커밋해줘야한다
+
 
 
 ## 4.5. Admin Client
@@ -483,15 +491,15 @@ Kafka가 Rebalancing 되는 과정 중에서는 모든 Consuming( Data Fetching 
 
 
 
-## Offset, Commit 관련
+## 5.6. Offset 관련
 
-### enable.auto.commit (default=true)
+**Offset Reset 정책**
 
-- true일 경우 백그라운드로 주기적으로 오프셋을 커밋
-- true일 경우 편리하지만 데이터 누락이나 중복 처리가 발생할 수 있음
-- poll(), close() 메서드 호출시 자동 커밋 실행
-- [auto.commit.interval.ms](http://auto.commit.interval.ms): 자동 커밋 주기
-- false 일 경우 : commitSync() - 동기, commitAsync() - 비동기로 커밋해줘야한다
+
+
+**Offset 변경하기**
+
+CLI 상에서는 현재 활성화된 Consumer가 ConsumerGroup 내에 존재하는 경우 Offset 변경 불가능
 
 
 
@@ -933,6 +941,8 @@ https://data-engineer-tech.tistory.com/11
 > https://cwiki.apache.org/confluence/display/KAFKA/KIP-345%3A+Introduce+static+membership+protocol+to+reduce+consumer+rebalances
 
 
+
+## commit을 단건 호출 했더니 발생했던 에러
 
 
 
