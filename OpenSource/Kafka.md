@@ -944,6 +944,23 @@ https://data-engineer-tech.tistory.com/11
 
 ## commit을 단건 호출 했더니 발생했던 에러
 
+**문제점**
+
+서버가 시작되고 나서 5분 이내에 갑작스러운 Error와 함께 서버가 종료되는 현상이 발생
+
+```
+# Error Log
+WARNING:kafka.coordinator:Heartbeat poll expired, leaving group
+INFO:kafka.conn:<BrokerConnection node_id=2 host=<HOST>:9094 <connected> [IPv4 (‘<IP>’, 9094)]>: Closing connection. KafkaConnectionError: Socket EVENT_READ without in-flight-requests
+WARNING:kafka.client:Node 2 connection failed -- refreshing metadata
+```
+
+
+
+**해결 방안**
+
+- message마다 commit하지 않고 100-1000개 단위로 commit을 하도록 변경
+
 
 
 
