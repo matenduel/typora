@@ -78,7 +78,12 @@ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 ### 2.2.3. HA Mode
 
-* `Consul` storage backend를 사용
+* 고가용성이 지원되는 storage backend를 사용하여야 한다. 
+    * `Consul`
+    * `Raft`
+    * `PostgreSQL`
+    * ...
+
 * 공유된 하나의 storage backend를 사용한다.
 
 #### YAML Example
@@ -89,8 +94,6 @@ server:
     enabled: true
     replicas: 3
 ```
-
-
 
 
 
@@ -494,6 +497,62 @@ Unseal Progress: 0
 
 
 
+### 4.2.3. Raft
+
+**join**
+
+```sh
+Usage: vault operator raft join [options] <leader-api-addr>
+
+  Join the current node as a peer to the Raft cluster by providing the address
+  of the Raft leader node.
+
+      $ vault operator raft join "http://127.0.0.2:8200"
+```
+
+
+
+**list-peers**
+
+```sh
+Usage: vault operator raft list-peers
+
+  Provides the details of all the peers in the Raft cluster.
+
+      $ vault operator raft list-peers
+```
+
+
+
+**remove-peer**
+
+```sh
+Usage: vault operator raft remove-peer <server_id>
+
+  Removes a node from the Raft cluster.
+
+      $ vault operator raft remove-peer node1
+```
+
+
+
+**snapshot**
+
+```sh
+Usage: vault operator raft snapshot <subcommand> [options] [args]
+
+  This command groups subcommands for operators interacting with the snapshot
+  functionality of the integrated Raft storage backend.
+
+Subcommands:
+    restore    Installs the provided snapshot, returning the cluster to the state defined in it
+    save       Saves a snapshot of the current state of the Raft cluster into a file
+```
+
+
+
+
+
 ## 4.3 Secrets
 
 
@@ -595,9 +654,132 @@ Unseal Progress: 0
 
 ### Consul
 
+```yaml
+# Example
+server:
+  ha:
+    enabled: true
+    replicas: 3
+    
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+
+      service_registration "kubernetes" {}
+```
+
+
+
 ### Raft
 
-### 그 외
+```yaml
+# Example
+server:
+  ha:
+    enabled: true
+    replicas: 3
+
+    raft:
+      enabled: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
+  
+  dataStorage:
+    enabled: true
+    size: 20Gi
+    storageClass: "<StorageClass>"
+    
+  auditStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: "<StorageClass>"
+
+```
+
+
+
+## 6.3. Metrics
+
+
+
+
+
+## 6.4. (Raft) Backup & Restore
+
+**prerequisite**
+
+- User that have the following permissions
+
+    - `sys/storage/raft/snapshot`
+
+- [Optional] port-forwarding 
+
+    ```sh
+    # Example - Kubernetes
+    kubectl port-forward svc/<SERVICE_NAME> 8200:8200 -n vault
+    ```
+
+- 
+
+
+
+**Backup Procedure**
+
+1. `Vault` 서버에 로그인하기
+
+```sh
+export VAULT_ADDR="http://localhost:8200"
+
+# login with token
+vault login
+```
+
+
+
+2. `snapshot` 만들기
+
+```sh
+vault operator raft snapshot save backup.snap
+```
+
+
+
+**Restore Procedure**
+
+1. 데이터 복원하기
+
+```sh
+vault operator raft snapshot restore -force backup.snap
+```
+
+
+
+2. [Optional] Auto-unseal인 경우 서버를 재실행 한다.
+
+
+
+
 
 
 
