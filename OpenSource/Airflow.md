@@ -379,6 +379,130 @@ Here’s an example DAG which illustrates labeling different branches:
 
 
 
+## Dataset
+
+>In Airflow 2.4, the URI is not used to connect to an external system and there is no awareness of the content or location of the dataset
+
+`dataset`은 `producer` Task에 의해서 업데이트되며 `consumer` DAG을 스케쥴링하여 소비하게 합니다.
+
+
+
+`dataset`은 `TriggerDagRunOperator`와 매우 유사합니다. 하지만, 상위 작업이 하위 작업을 **직접** 실행하여야하는 `TriggerDagRunOperator`와 다르게, `dataset`은 중간 매개체인 `dataset`을 통해서 하위 작업이 스케쥴링됩니다. 따라서, `dataset`을 사용하는 경우 상위 작업(`producer`)을 수정하지 않고도 하위 작업(`consumer`)을 추가할 수 있습니다. 
+
+
+
+`dataset`은 `Uniform Resource Identifier (URI)`를 통해서 정의되며 다음과 같이 사용합니다. 
+
+```py
+from airflow import Dataset
+
+# Must be Unique URI
+example_dataset = Dataset(uri="s3://dataset-bucket/example.csv")
+```
+
+주의해야할 점은 다음과 같습니다. 
+
+1.  `2.4.x` 버젼 기준 URI에 `S3`와 같은 schema가 적혀있다하더라도 외부 시스템에 연결하는 것이 아닙니다.
+    ```python
+    # Just Name, not connection uri
+    s3_dataset = Dataset(uri="s3://dataset-bucket/example.csv")
+    ```
+
+2. URI는 단순 문자열(`string`)으로 처리되므로 정규 표현식 또는 file glob 패턴 형태로 URI를 작성한다고해서 여러개의 dataset을 만들거나 소비할 수 있는 것이 아닙니다. 
+    ```python
+    # URI treat as string, neither glob pattern or regex
+    regular_expression = Dataset("input_\d+.csv")
+    glob_pattern = Dataset("input_2022*.csv")
+    ```
+
+3. URI는 ASCII 문자열로만 이루어져 있어야 합니다. 
+    ```python
+    # Not Allowed
+    not_ascii = Dataset("èxample_datašet")
+    ```
+
+4. `airflow` 스키마는 사용할 수 없습니다. 
+
+    ```python
+    # Not Allowed
+    reserved = Dataset("airflow://example_dataset")
+    ```
+
+5. `timetable-based schedule`과 함께 사용할 수 없습니다. 
+
+    ```python
+    # Mixed is not Allowed
+    with DAG(
+        dag_id="mixed_dag",
+        catchup=False,
+        start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
+        schedule=[dag1_dataset, "0 * * * *"],
+    ):
+    ```
+
+6. 여러개의 `dataset`을 소비하는 경우, 모든 `dataset`이 업데이트 된 이후에만 작업이 실행됩니다. 
+
+    >The `schedule` parameter to your DAG can take either a list of datasets to consume or a timetable-based option. The two cannot currently be mixed.
+    >
+    >When using datasets, in this first release (v2.4) waiting for all datasets in the list to be updated is the only option when multiple datasets are consumed by a DAG. A later release may introduce more fine-grained options allowing for greater flexibility.
+
+    ![multiple_dataset](./Airflow.assets/multiple_dataset.png)
+
+**Example - producer**
+
+```python
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+import pendulum
+
+# Define datasets
+dag1_dataset = Dataset("s3://dataset1/output_1.txt")
+dag2_dataset = Dataset("s3://dataset2/output_2.txt")
+
+
+with DAG(
+    dag_id="dataset_upstream1",
+    start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
+    schedule="@daily",
+    catchup=False,
+) as dag1:
+    BashOperator(
+        task_id="upstream_task_1",
+        bash_command="sleep 5",
+        outlets=[dag1_dataset],  # Define which dataset is updated by this task
+    )
+
+    BashOperator(
+        task_id="upstream_task_2",
+        bash_command="sleep 5",
+        outlets=[dag2_dataset],  # Define which dataset is updated by this task
+    )
+```
+
+
+
+**Example - Consumer**
+
+```python
+from airflow import DAG, Dataset
+from airflow.operators.bash import BashOperator
+import pendulum
+
+dag1_dataset = Dataset("s3://dataset1/output_1.txt")
+dag2_dataset = Dataset("s3://dataset2/output_2.txt")
+
+with DAG(
+    dag_id="dataset_downstream_1_2",
+    catchup=False,
+    start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
+    schedule=[dag1_dataset, dag2_dataset],
+    tags=["downstream"],
+) as dag3:
+    BashOperator(task_id="downstream_2", bash_command="sleep 5")
+```
+
+
+
 
 
 # 6. CLI
