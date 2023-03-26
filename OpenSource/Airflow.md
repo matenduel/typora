@@ -308,11 +308,73 @@ https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html#dag-dep
 
 ## Operator
 
+### PythonOperator
+
+
+
 ### LatestOnlyOperator
 
+> Allows a workflow to skip tasks that are not running during the most recent schedule interval.
+
+최근 스케쥴이 아니라면, 모든 하위 작업을 스킵합니다. 따라서, 가장 마지막의 스케쥴만 실행하게 됩니다. 
+
+```tex
+# 현재: 2023-03-25 14:00:00 
+# 실행주기: hourly
+
+# `logical_datetime` -> Status
+`2023-03-23 14:00:00` -> Skip
+`2023-03-25 12:00:00` -> Skip
+`2023-03-25 13:00:00` -> Run  # Last
+```
 
 
-### PythonOperator
+
+최근 스케쥴만 실행시킨다는 점에서 `catchup`과 매우 유사합니다. 하지만, 실행되지 않은 과거 `DAG`을 아예 스케쥴링하지 않는 `catchup`과 다르게, `LastOnlyOperator`는 DAG이 실행된 상황에서 별도로 최신 작업 여부를 확인하고 하위 작업(downstream)의 스킵합니다. 그러므로, 과거 실행되었던 `DAG`을 재실행하는 경우, `catchup`은 모든 task가 재실행되지만 `LastOnlyOperator`는 하위 작업을 실행하지 않습니다. 
+
+
+
+**Summary**
+
+| Name             | 적용 단위 | 과거 작업 재실행 | 외부 실행(External Trigger) |
+| ---------------- | --------- | ---------------- | --------------------------- |
+| catchup          | DAG       | Run              | Run                         |
+| LastOnlyOperator | Task      | Skip             | Run                         |
+
+
+
+**Example**
+
+```python
+from airflow import DAG
+from airflow.operators.latest_only import LatestOnlyOperator
+from airflow.operators.python import PythonOperator
+
+with DAG(
+    'daily_aggregate',,
+    schedule="30 0 * * *",
+    start_date=datetime(2022, 1, 1),
+    catchup=False,
+) as dag:
+    task1 = PythonOperator(
+        task_id='task1',
+        python_callable=task1,
+    )
+
+    is_latest_dag_run = LatestOnlyOperator(
+        task_id="is_latest_dag_run"
+    )
+
+    task2 = PythonOperator(
+        task_id='task2',
+        python_callable=task2,
+    )
+    
+    # Task Relationship
+    task1 >> is_latest_dag_run >> task2
+```
+
+
 
 
 
