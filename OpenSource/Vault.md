@@ -215,6 +215,55 @@ curl --request POST \
 
 ### 3.1.3. Kubernetes (k8s)
 
+`kubernetes` 인증은 다음 명령어를 통해서 활성화할 수 있습니다. 
+
+```sh
+vault auth enable -path=kubernetes kubernetes
+# Success! Enabled kubernetes auth method at: eks/
+```
+
+
+
+활성화한 이후, 인증과 관련된 설정을 추가로 진행해야합니다. 다음은 `Pod` 내부에 저장되어있는 `service account` 정보를 사용하여 인증 설정을 업데이트하는 예제입니다. 
+
+```sh
+# vault write auth/<path>/config ...
+vault write auth/kubernetes/config \
+  token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
+  kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+```
+
+
+
+이후, 해당 인증방식에서 사용할 정책(`Policy`)과 역할(`Role`)을 생성합니다. 
+
+```sh
+# scret-read policy와 kubernetes interanl-app role 연결
+# vault-test 네임스페이스에 vault-secret-read 서비스어카운트에게 권한부여
+vault write auth/kubernetes/role/api-server \
+  bound_service_account_names=static \
+  bound_service_account_namespaces=vault \
+  policies=default \
+  ttl=24h
+```
+
+
+
+다음과 같은 방식으로 로그인할 수 있습니다. 
+
+```sh
+vault write auth/kubernetes/login role=demo jwt=<JWT_TOKEN>
+```
+
+
+
+**주의사항**
+
+- 사용할 클러스터마다 config가 달라지므로 클러스터마다 `path`를 다르게 설정해야한다. 
+
+
+
 ```
 vault-agent: [<https://www.vaultproject.io/docs/agent>](<https://www.vaultproject.io/docs/agent>)
 
@@ -785,9 +834,9 @@ vault operator raft snapshot restore -force backup.snap
 
 ## Agent Inject
 
-### Kubernetes 
 
-> https://developer.hashicorp.com/vault/docs/platform/k8s/injector
+
+
 
 
 
