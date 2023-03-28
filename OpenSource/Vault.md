@@ -832,7 +832,147 @@ vault operator raft snapshot restore -force backup.snap
 
 
 
-## Agent Inject
+## 6.5. Agent Inject
+
+> Kubernetes 인증방식이 아닌 다른 인증 방식을 사용하는 경우, 인증과 관련된 정보를 함께 전달해야하므로 가급적  `kubernetes` 인증 방식을 사용하는 것이 좋습니다. 
+
+**Annotation List**
+
+
+
+- [`vault.hashicorp.com/agent-inject`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-inject) - configures whether injection is explicitly enabled or disabled for a pod. This should be set to a `true` or `false` value. Defaults to `false`.
+
+- [`vault.hashicorp.com/agent-inject-secret`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-inject-secret) - configures Vault Agent to retrieve the secrets from Vault required by the container. The name of the secret is any unique string after `vault.hashicorp.com/agent-inject-secret-`, such as `vault.hashicorp.com/agent-inject-secret-foobar`. The value is the path in Vault where the secret is located.
+- [`vault.hashicorp.com/agent-inject-template`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-inject-template) - configures the template Vault Agent should use for rendering a secret. The name of the template is any unique string after `vault.hashicorp.com/agent-inject-template-`, such as `vault.hashicorp.com/agent-inject-template-foobar`. This should map to the same unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided, a default generic template is used.
+
+- [`vault.hashicorp.com/agent-pre-populate`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-pre-populate) - configures whether an init container is included to pre-populate the shared memory volume with secrets prior to the containers starting.
+- [`vault.hashicorp.com/agent-pre-populate-only`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-pre-populate-only) - configures whether an init container is the only injected container. If true, no sidecar container will be injected at runtime of the pod. Enabling this option is recommended for workloads of type `CronJob` or `Job` to ensure a clean pod termination.
+
+
+
+- [`vault.hashicorp.com/auth-config`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-config) - configures additional parameters for the configured authentication method. The name of the config is any unique string after `vault.hashicorp.com/auth-config-`, such as `vault.hashicorp.com/auth-config-role-id-file-path`. This annotation can be reused multiple times to configure multiple settings for the authentication method. Some authentication methods may require additional secrets and should be mounted via the `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations, see the Vault Agent [auto-auth documentation](https://developer.hashicorp.com/vault/docs/agent/autoauth/methods).
+- [`vault.hashicorp.com/auth-path`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-path) - configures the authentication path for the Kubernetes auth method. Defaults to `auth/kubernetes`.
+- [`vault.hashicorp.com/auth-type`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-type) - configures the authentication type for Vault Agent. Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent [auto-auth documentation](https://developer.hashicorp.com/vault/docs/agent/autoauth/methods).
+- [`vault.hashicorp.com/role`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-role) - configures the Vault role used by the Vault Agent auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
+- [`vault.hashicorp.com/service`](https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-service) - configures the Vault address for the injected Vault Agent to use. This value overrides the default Vault address configured in the injector, and may either be the address of a Vault service within the same Kubernetes cluster as the injector, or an external Vault URL.
+
+
+
+**Example - Kubernetes authentication**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: vault-injector-test
+  name: vault-injector-test
+  namespace: vault-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-injector-test
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-test: secret/data/test
+        vault.hashicorp.com/agent-inject-status: update
+        vault.hashicorp.com/role: internal-app
+      labels:
+        app: vault-injector-test
+    spec:
+      serviceAccountName: vault-secret-read
+      containers:
+      - image: alpine
+        command:
+          - "sh"
+          - "-c"
+          - "cat /vault/secrets/test && sleep 10000"
+        imagePullPolicy: Always
+        name: vault-injector-test
+```
+
+
+
+**Example - Without vault agent**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: vault-injector-test
+  name: vault-injector-test
+  namespace: vault-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-injector-test
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-test: secret/data/test
+        vault.hashicorp.com/agent-pre-populate-only: 'true'
+        vault.hashicorp.com/role: internal-app
+      labels:
+        app: vault-injector-test
+    spec:
+      serviceAccountName: vault-secret-read
+      containers:
+      - image: alpine
+        command:
+          - "sh"
+          - "-c"
+          - "cat /vault/secrets/test && sleep 10000"
+        imagePullPolicy: Always
+        name: vault-injector-test
+```
+
+
+
+**Example - Apply format**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'web'
+        vault.hashicorp.com/agent-inject-secret-config: 'secret/data/web'
+        # Environment variable export template
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ with secret "secret/data/web" -}}
+            export api_key="{{ .Data.data.payments_api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: alpine:latest
+          command:
+            ['sh', '-c']
+          args:
+            ['source /vault/secrets/config && <entrypoint script>']
+          ports:
+            - containerPort: 9090
+```
 
 
 
