@@ -274,6 +274,12 @@ vault-agent: [<https://www.vaultproject.io/docs/agent>](<https://www.vaultprojec
 
 
 
+### 3.1.4. AWS (IAM)
+
+> https://faun.pub/using-aws-iam-auth-method-with-hashicorp-vault-7f174e5d1bdd
+
+
+
 
 
 ## 3.3. Secret
@@ -986,19 +992,9 @@ spec:
 
 > https://developer.hashicorp.com/vault/docs/auth/jwt/oidc-providers/google
 
-## 인증 방법
-
-### Kubernetes
 
 
-
-### Agent
-
-### AWS (IAM)
-
-> https://faun.pub/using-aws-iam-auth-method-with-hashicorp-vault-7f174e5d1bdd
-
-
+### 
 
 
 
