@@ -163,17 +163,27 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 
 
-# 5. Advanced
+# 5. Basic
 
-## DAG
+## 5.1. DAG
 
-### Parameters
+### 5.1.1. Parameters
 
 * schedule_interval
+
+
+
 * start_date
+
+
+
 * catchup
+
+
+
 * tags
-* 
+
+
 
 * default_args
 
@@ -183,9 +193,11 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 ### Branching
 
-### Dependencies
 
-https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html#dag-dependencies
+
+### SubDAGs
+
+
 
 
 
@@ -304,6 +316,46 @@ https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html#dag-dep
 
 
 
+### Task Group
+
+
+
+### Timeouts
+
+If you want a task to have a maximum runtime, set its `execution_timeout` attribute to a `datetime.timedelta` value that is the maximum permissible runtime. This applies to all Airflow tasks, including sensors. `execution_timeout` controls the maximum time allowed for every execution. If `execution_timeout` is breached, the task times out and `AirflowTaskTimeout` is raised.
+
+In addition, sensors have a `timeout` parameter. This only matters for sensors in `reschedule` mode. `timeout` controls the maximum time allowed for the sensor to succeed. If `timeout` is breached, `AirflowSensorTimeout` will be raised and the sensor fails immediately without retrying.
+
+The following `SFTPSensor` example illustrates this. The `sensor` is in `reschedule` mode, meaning it is periodically executed and rescheduled until it succeeds.
+
+- Each time the sensor pokes the SFTP server, it is allowed to take maximum 60 seconds as defined by `execution_timeout`.
+- If it takes the sensor more than 60 seconds to poke the SFTP server, `AirflowTaskTimeout` will be raised. The sensor is allowed to retry when this happens. It can retry up to 2 times as defined by `retries`.
+- From the start of the first execution, till it eventually succeeds (i.e. after the file 'root/test' appears), the sensor is allowed maximum 3600 seconds as defined by `timeout`. In other words, if the file does not appear on the SFTP server within 3600 seconds, the sensor will raise `AirflowSensorTimeout`. It will not retry when this error is raised.
+- If the sensor fails due to other reasons such as network outages during the 3600 seconds interval, it can retry up to 2 times as defined by `retries`. Retrying does not reset the `timeout`. It will still have up to 3600 seconds in total for it to succeed.
+
+```
+sensor = SFTPSensor(
+    task_id="sensor",
+    path="/root/test",
+    execution_timeout=timedelta(seconds=60),
+    timeout=3600,
+    retries=2,
+    mode="reschedule",
+)
+```
+
+
+
+### SLA
+
+An SLA, or a Service Level Agreement, is an expectation for the maximum time a Task should be completed relative to the Dag Run start time. If a task takes longer than this to run, it is then visible in the "SLA Misses" part of the user interface, as well as going out in an email of all tasks that missed their SLA.
+
+Tasks over their SLA are not cancelled, though - they are allowed to run to completion. If you want to cancel a task after a certain runtime is reached, you want [Timeouts](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/tasks.html#concepts-timeouts) instead.
+
+To set an SLA for a task, pass a `datetime.timedelta` object to the Task/Operator's `sla` parameter. You can also supply an `sla_miss_callback` that will be called when the SLA is missed if you want to run your own logic.
+
+If you want to disable SLA checking entirely, you can set `check_slas = False` in Airflow's `[core]` configuration.
+
 
 
 ## Operator
@@ -383,6 +435,12 @@ with DAG(
 
 
 ### BranchDayOfWeekOperator
+
+
+
+
+
+### KubernetesPodOperator
 
 
 
@@ -567,7 +625,112 @@ with DAG(
 
 
 
-# 6. CLI
+# 6. Advanced
+
+## `.airflowignore`
+
+An `.airflowignore` file specifies the directories or files in `DAG_FOLDER` or `PLUGINS_FOLDER` that Airflow should intentionally ignore. Airflow supports two syntax flavors for patterns in the file, as specified by the `DAG_IGNORE_FILE_SYNTAX` configuration parameter (*added in Airflow 2.3*): `regexp` and `glob`.
+
+Note
+
+The default `DAG_IGNORE_FILE_SYNTAX` is `regexp` to ensure backwards compatibility.
+
+For the `regexp` pattern syntax (the default), each line in `.airflowignore` specifies a regular expression pattern, and directories or files whose names (not DAG id) match any of the patterns would be ignored (under the hood, `Pattern.search()` is used to match the pattern). Use the `#` character to indicate a comment; all characters on a line following a `#` will be ignored.
+
+With the `glob` syntax, the patterns work just like those in a `.gitignore` file:
+
+- The `*` character will any number of characters, except `/`
+- The `?` character will match any single character, except `/`
+- The range notation, e.g. `[a-zA-Z]`, can be used to match one of the characters in a range
+- A pattern can be negated by prefixing with `!`. Patterns are evaluated in order so a negation can override a previously defined pattern in the same file or patterns defined in a parent directory.
+- A double asterisk (`**`) can be used to match across directories. For example, `**/__pycache__/` will ignore `__pycache__` directories in each sub-directory to infinite depth.
+- If there is a `/` at the beginning or middle (or both) of the pattern, then the pattern is relative to the directory level of the particular .airflowignore file itself. Otherwise the pattern may also match at any level below the .airflowignore level.
+
+The `.airflowignore` file should be put in your `DAG_FOLDER`. For example, you can prepare a `.airflowignore` file using the `regexp` syntax with content
+
+```
+project_a
+tenant_[\d]
+```
+
+
+
+Or, equivalently, in the `glob` syntax
+
+```
+**/*project_a*
+tenant_[0-9]*
+```
+
+
+
+Then files like `project_a_dag_1.py`, `TESTING_project_a.py`, `tenant_1.py`, `project_a/dag_1.py`, and `tenant_1/dag_1.py` in your `DAG_FOLDER` would be ignored (If a directory's name matches any of the patterns, this directory and all its subfolders would not be scanned by Airflow at all. This improves efficiency of DAG finding).
+
+The scope of a `.airflowignore` file is the directory it is in plus all its subfolders. You can also prepare `.airflowignore` file for a subfolder in `DAG_FOLDER` and it would only be applicable for that subfolder.
+
+
+
+## Executor
+
+### Kubernetes Executor
+
+
+
+
+
+### Selary Executor
+
+
+
+
+
+## SubDAGs Vs. TaskGroup
+
+> SubDAG is deprecated hence TaskGroup is always the preferred choice.
+
+SubDAGs, while serving a similar purpose as TaskGroups, introduces both performance and functional issues due to its implementation.
+
+- The SubDagOperator starts a BackfillJob, which ignores existing parallelism configurations potentially oversubscribing the worker environment.
+- SubDAGs have their own DAG attributes. When the SubDAG DAG attributes are inconsistent with its parent DAG, unexpected behavior can occur.
+- Unable to see the "full" DAG in one view as SubDAGs exists as a full fledged DAG.
+- SubDAGs introduces all sorts of edge cases and caveats. This can disrupt user experience and expectation.
+
+TaskGroups, on the other hand, is a better option given that it is purely a UI grouping concept. All tasks within the TaskGroup still behave as any other tasks outside of the TaskGroup.
+
+You can see the core differences between these two constructs.
+
+| TaskGroup                                                    | SubDAG                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Repeating patterns as part of the same DAG                   | Repeating patterns as a separate DAG                         |
+| One set of views and statistics for the DAG                  | Separate set of views and statistics between parent and child DAGs |
+| One set of DAG configuration                                 | Several sets of DAG configurations                           |
+| Honors parallelism configurations through existing SchedulerJob | Does not honor parallelism configurations due to newly spawned BackfillJob |
+| Simple construct declaration with context manager            | Complex DAG factory with naming restrictions                 |
+
+
+
+## DAG
+
+### DAG Dependencies
+
+While dependencies between tasks in a DAG are explicitly defined through upstream and downstream relationships, dependencies between DAGs are a bit more complex. In general, there are two ways in which one DAG can depend on another:
+
+- triggering - [`TriggerDagRunOperator`](https://airflow.apache.org/docs/apache-airflow/stable/_api/airflow/operators/trigger_dagrun/index.html#airflow.operators.trigger_dagrun.TriggerDagRunOperator)
+- waiting - `ExternalTaskSensor`
+
+Additional difficulty is that one DAG could wait for or trigger several runs of the other DAG with different data intervals. The **Dag Dependencies** view `Menu -> Browse -> DAG Dependencies` helps visualize dependencies between DAGs. The dependencies are calculated by the scheduler during DAG serialization and the webserver uses them to build the dependency graph.
+
+The dependency detector is configurable, so you can implement your own logic different than the defaults in `DependencyDetector`
+
+
+
+## Task
+
+### 
+
+
+
+
 
 
 
@@ -580,6 +743,10 @@ with DAG(
 # Security
 
 
+
+
+
+# Monitoring
 
 
 
