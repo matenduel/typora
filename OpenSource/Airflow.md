@@ -197,6 +197,8 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 ### SubDAGs
 
+> 사실상 deprecated 되었으므로 가급적 사용하지 말 것
+
 
 
 
@@ -358,6 +360,27 @@ If you want to disable SLA checking entirely, you can set `check_slas = False` i
 
 
 
+### Executor Configuration
+
+Some [Executors](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/index.html) allow optional per-task configuration - such as the `KubernetesExecutor`, which lets you set an image to run the task on.
+
+This is achieved via the `executor_config` argument to a Task or Operator. Here's an example of setting the Docker image for a task that will run on the `KubernetesExecutor`:
+
+```
+MyOperator(...,
+    executor_config={
+        "KubernetesExecutor":
+            {"image": "myCustomDockerImage"}
+    }
+)
+```
+
+
+
+The settings you can pass into `executor_config` vary by executor, so read the [individual executor documentation](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/index.html) in order to see what you can set.
+
+
+
 ## Operator
 
 ### PythonOperator
@@ -449,6 +472,21 @@ with DAG(
 
 
 ## Sensors
+
+Sensors are a special type of [Operator](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/operators.html) that are designed to do exactly one thing - wait for something to occur. It can be time-based, or waiting for a file, or an external event, but all they do is wait until something happens, and then *succeed* so their downstream tasks can run.
+
+Because they are primarily idle, Sensors have two different modes of running so you can be a bit more efficient about using them:
+
+- `poke` (default): The Sensor takes up a worker slot for its entire runtime
+- `reschedule`: The Sensor takes up a worker slot only when it is checking, and sleeps for a set duration between checks
+
+The `poke` and `reschedule` modes can be configured directly when you instantiate the sensor; generally, the trade-off between them is latency. Something that is checking every second should be in `poke` mode, while something that is checking every minute should be in `reschedule` mode.
+
+Much like Operators, Airflow has a large set of pre-built Sensors you can use, both in core Airflow as well as via our *providers* system.
+
+
+
+
 
 ## Triggers
 
@@ -623,6 +661,16 @@ with DAG(
 
 
 
+## Logging
+
+```python
+logger = logging.getLogger("airflow.task")
+```
+
+
+
+
+
 
 
 # 6. Advanced
@@ -674,11 +722,173 @@ The scope of a `.airflowignore` file is the directory it is in plus all its subf
 
 ### Kubernetes Executor
 
+> https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/kubernetes.html
+
+![arch-diag-kubernetes2](./Airflow.assets/arch-diag-kubernetes2.png)
+
+
+
+#### pod_template_file
+
+To customize the pod used for k8s executor worker processes, you may create a pod template file. You must provide the path to the template file in the `pod_template_file` option in the `kubernetes_executor` section of `airflow.cfg`.
+
+Airflow has two strict requirements for pod template files: base image and pod name.
+
+**Base image**
+
+A `pod_template_file` must have a container named `base` at the `spec.containers[0]` position, and its `image` must be specified.
+
+You are free to create sidecar containers after this required container, but Airflow assumes that the airflow worker container exists at the beginning of the container array, and assumes that the container is named `base`.
+
+Note
+
+Airflow may override the base container `image`, e.g. through [pod_override](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/kubernetes.html#concepts-pod-override) configuration; but it must be present in the template file and must not be blank.
+
+**Pod name**
+
+The pod's `metadata.name` must be set in the template file. This field will *always* be set dynamically at pod launch to guarantee uniqueness across all pods. But again, it must be included in the template, and cannot be left blank.
+
+#### pod_override
+
+When using the KubernetesExecutor, Airflow offers the ability to override system defaults on a per-task basis. To utilize this functionality, create a Kubernetes V1pod object and fill in your desired overrides. Please note that the scheduler will override the `metadata.name` and `containers[0].args` of the V1pod before launching it.
+
+To overwrite the base container of the pod launched by the KubernetesExecutor, create a V1pod with a single container, and overwrite the fields as follows:
+
+airflow/example_dags/example_kubernetes_executor.py[[source\]](https://airflow.apache.org/docs/apache-airflow/stable/_modules/airflow/example_dags/example_kubernetes_executor.html)
+
+```
+        executor_config_volume_mount = {
+            "pod_override": k8s.V1Pod(
+                spec=k8s.V1PodSpec(
+                    containers=[
+                        k8s.V1Container(
+                            name="base",
+                            volume_mounts=[
+                                k8s.V1VolumeMount(mount_path="/foo/", name="example-kubernetes-test-volume")
+                            ],
+                        )
+                    ],
+                    volumes=[
+                        k8s.V1Volume(
+                            name="example-kubernetes-test-volume",
+                            host_path=k8s.V1HostPathVolumeSource(path="/tmp/"),
+                        )
+                    ],
+                )
+            ),
+        }
+
+        @task(executor_config=executor_config_volume_mount)
+        def test_volume_mount():
+            """
+            Tests whether the volume has been mounted.
+            """
+
+            with open("/foo/volume_mount_test.txt", "w") as foo:
+                foo.write("Hello")
+
+            return_code = os.system("cat /foo/volume_mount_test.txt")
+            if return_code != 0:
+                raise ValueError(f"Error when checking volume mount. Return code {return_code}")
+
+        volume_task = test_volume_mount()
+```
+
+
+
+Note that the following fields **will all be extended** instead of overwritten. From *spec*: volumes, and init_containers. From *container*: volume mounts, environment variables, ports, and devices.
+
+To add a sidecar container to the launched pod, create a V1pod with an empty first container with the name `base` and a second container containing your desired sidecar.
+
+airflow/example_dags/example_kubernetes_executor.py[[source\]](https://airflow.apache.org/docs/apache-airflow/stable/_modules/airflow/example_dags/example_kubernetes_executor.html)
+
+```
+        executor_config_sidecar = {
+            "pod_override": k8s.V1Pod(
+                spec=k8s.V1PodSpec(
+                    containers=[
+                        k8s.V1Container(
+                            name="base",
+                            volume_mounts=[k8s.V1VolumeMount(mount_path="/shared/", name="shared-empty-dir")],
+                        ),
+                        k8s.V1Container(
+                            name="sidecar",
+                            image="ubuntu",
+                            args=['echo "retrieved from mount" > /shared/test.txt'],
+                            command=["bash", "-cx"],
+                            volume_mounts=[k8s.V1VolumeMount(mount_path="/shared/", name="shared-empty-dir")],
+                        ),
+                    ],
+                    volumes=[
+                        k8s.V1Volume(name="shared-empty-dir", empty_dir=k8s.V1EmptyDirVolumeSource()),
+                    ],
+                )
+            ),
+        }
+
+        @task(executor_config=executor_config_sidecar)
+        def test_sharedvolume_mount():
+            """
+            Tests whether the volume has been mounted.
+            """
+            for i in range(5):
+                try:
+                    return_code = os.system("cat /shared/test.txt")
+                    if return_code != 0:
+                        raise ValueError(f"Error when checking volume mount. Return code {return_code}")
+                except ValueError as e:
+                    if i > 4:
+                        raise e
+
+        sidecar_task = test_sharedvolume_mount()
+```
+
+
+
+You can also create custom `pod_template_file` on a per-task basis so that you can recycle the same base values between multiple tasks. This will replace the default `pod_template_file` named in the airflow.cfg and then override that template using the `pod_override`.
+
+Here is an example of a task with both features:
+
+```
+import os
+
+import pendulum
+
+from airflow import DAG
+from airflow.decorators import task
+from airflow.example_dags.libs.helper import print_stuff
+from airflow.settings import AIRFLOW_HOME
+
+from kubernetes.client import models as k8s
+
+with DAG(
+    dag_id="example_pod_template_file",
+    schedule=None,
+    start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
+    catchup=False,
+    tags=["example3"],
+) as dag:
+    executor_config_template = {
+        "pod_template_file": os.path.join(AIRFLOW_HOME, "pod_templates/basic_template.yaml"),
+        "pod_override": k8s.V1Pod(metadata=k8s.V1ObjectMeta(labels={"release": "stable"})),
+    }
+
+    @task(executor_config=executor_config_template)
+    def task_with_template():
+        print_stuff()
+```
 
 
 
 
-### Selary Executor
+
+### Celery Executor
+
+
+
+
+
+### Celery Kubernetes Executor
 
 
 
@@ -726,11 +936,119 @@ The dependency detector is configurable, so you can implement your own logic dif
 
 ## Task
 
-### 
 
 
 
 
+## Security
+
+### Oauth 
+
+**Example - using team based Authorization with GitHub OAuth**
+
+There are a few steps required in order to use team-based authorization with GitHub OAuth.
+
+- configure OAuth through the FAB config in webserver_config.py
+- create a custom security manager class and supply it to FAB in webserver_config.py
+- map the roles returned by your security manager class to roles that FAB understands.
+
+Here is an example of what you might have in your webserver_config.py:
+
+```python
+from flask_appbuilder.security.manager import AUTH_OAUTH
+import os
+
+AUTH_TYPE = AUTH_OAUTH
+AUTH_ROLES_SYNC_AT_LOGIN = True  # Checks roles on every login
+AUTH_USER_REGISTRATION = True  # allow users who are not already in the FAB DB to register
+# Make sure to replace this with the path to your security manager class
+FAB_SECURITY_MANAGER_CLASS = "your_module.your_security_manager_class"
+AUTH_ROLES_MAPPING = {
+    "Viewer": ["Viewer"],
+    "Admin": ["Admin"],
+}
+# If you wish, you can add multiple OAuth providers.
+OAUTH_PROVIDERS = [
+    {
+        "name": "github",
+        "icon": "fa-github",
+        "token_key": "access_token",
+        "remote_app": {
+            "client_id": os.getenv("OAUTH_APP_ID"),
+            "client_secret": os.getenv("OAUTH_APP_SECRET"),
+            "api_base_url": "https://api.github.com",
+            "client_kwargs": {"scope": "read:user, read:org"},
+            "access_token_url": "https://github.com/login/oauth/access_token",
+            "authorize_url": "https://github.com/login/oauth/authorize",
+            "request_token_url": None,
+        },
+    },
+]
+```
+
+
+
+Here is an example of defining a custom security manager. This class must be available in Python's path, and could be defined in webserver_config.py itself if you wish.
+
+```python
+from airflow.www.security import AirflowSecurityManager
+import logging
+from typing import Any, List, Union
+import os
+
+log = logging.getLogger(__name__)
+log.setLevel(os.getenv("AIRFLOW__LOGGING__FAB_LOGGING_LEVEL", "INFO"))
+
+FAB_ADMIN_ROLE = "Admin"
+FAB_VIEWER_ROLE = "Viewer"
+FAB_PUBLIC_ROLE = "Public"  # The "Public" role is given no permissions
+TEAM_ID_A_FROM_GITHUB = 123  # Replace these with real team IDs for your org
+TEAM_ID_B_FROM_GITHUB = 456  # Replace these with real team IDs for your org
+
+
+def team_parser(team_payload: dict[str, Any]) -> list[int]:
+    # Parse the team payload from GitHub however you want here.
+    return [team["id"] for team in team_payload]
+
+
+def map_roles(team_list: list[int]) -> list[str]:
+    # Associate the team IDs with Roles here.
+    # The expected output is a list of roles that FAB will use to Authorize the user.
+
+    team_role_map = {
+        TEAM_ID_A_FROM_GITHUB: FAB_ADMIN_ROLE,
+        TEAM_ID_B_FROM_GITHUB: FAB_VIEWER_ROLE,
+    }
+    return list(set(team_role_map.get(team, FAB_PUBLIC_ROLE) for team in team_list))
+
+
+class GithubTeamAuthorizer(AirflowSecurityManager):
+
+    # In this example, the oauth provider == 'github'.
+    # If you ever want to support other providers, see how it is done here:
+    # https://github.com/dpgaspar/Flask-AppBuilder/blob/master/flask_appbuilder/security/manager.py#L550
+    def get_oauth_user_info(self, provider: str, resp: Any) -> dict[str, Union[str, list[str]]]:
+
+        # Creates the user info payload from Github.
+        # The user previously allowed your app to act on their behalf,
+        #   so now we can query the user and teams endpoints for their data.
+        # Username and team membership are added to the payload and returned to FAB.
+
+        remote_app = self.appbuilder.sm.oauth_remotes[provider]
+        me = remote_app.get("user")
+        user_data = me.json()
+        team_data = remote_app.get("user/teams")
+        teams = team_parser(team_data.json())
+        roles = map_roles(teams)
+        log.debug(f"User info from Github: {user_data}\nTeam info from Github: {teams}")
+        return {"username": "github_" + user_data.get("login"), "role_keys": roles}
+```
+
+
+
+
+
+## Monitoring
 
 
 
@@ -740,13 +1058,9 @@ The dependency detector is configurable, so you can implement your own logic dif
 
 
 
-# Security
 
 
 
-
-
-# Monitoring
 
 
 
