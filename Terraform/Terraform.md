@@ -2273,45 +2273,94 @@ https://developer.hashicorp.com/terraform/language/settings/backends/remote
 
 ## Mono Repo Vs Multi Repo
 
+**고려사항**
+
+
+
+
+
+**결정한 이유**
+
 
 
 ## Terraform Cloud를 쓸것인가 말것인가?
+
+**고려사항**
+
+- `State`를 안전하게 보관
+- 여러명이 동시에 작업을 시도하더라도 한명만 작업 가능해야 함 (Lock 기능)
+
+**결정한 이유**
+
+1. `Variables` 설정을 통해서 변수를 안전하게 보관할 수 있다. 
+2. `Cloud`에 변수와 `State`가 관리되므로 언제 어디서든 작업을 할 수 있다. 
+3. UI를 통해서 과거 작업 기록과 변경사항을 손쉽게 확인할 수 있다. 
+4. `Lock` 기능을 통해서 여러명의 사용자가 동시에 작업하는 것을 방지할 수 있다. 
+5. `Role` 기능을 통해서 특정 인원만 변경 사항을 승인하도록 구성할 수 있다. 
+6. VCS 통합을 통해서 손쉽게 관리할 수 있다. 
 
 
 
 ## Multi Workspace
 
+**고려사항**
 
 
-## Import하기
+
+
+
+**결정한 이유**
+
+
+
+## Import를 통한 기존 리소스 연동
 
 **문제점**
 
-Terraform 도입과정에서 일정으로 인해서 S3, ECR등 일부 리소스를 AWS 콘솔을 이용하여 전개. 
-
-이렇게 되면 일부 환경에서만 일부 리소스의 코드가 누락되므로 DR이나 유지보수면에서 혼란을 야기함. 
-
-그렇다고 기존에 사용중인 리소스를 삭제한 다음 Terraform으로 다시 전개하는 것은 불필요한 중단을 야기할 수 있으며, 기존 설정과 100% 동일한 설정값이 작성되었는지 체크할 수 없음
-
-
+- `Terraform` 도입 과정 중 일정 문제로 인해 `S3`, `ECR`등 일부 리소스를 AWS 콘솔을 통해 전개함
+- 그로인해, 일부 환경에서 일부 리소스가 누락되어 DR 및 유지보수 측면에서 혼란을 야기함
+- 기존 리소스를 삭제  후 다시 전개하는 것은 서비스 중단 및 새로 생성한 리소스가 동일한 설정을 가지고 있는지 확인할 수 없음
 
 **해결방안**
 
-`import` 기능을 활용하여 기존의 Resource를 테라폼 코드로 변환함
-
-단, Terraform Cloud를 사용하는 경우, `apply`, `plan`과 다르게 Cloud에 세팅되어있는 `variables set`등을 가져오지 못하므로(Local에서 작업이 실행됨) Terraform 코드 내에서 사용하는 variables를 `.tfvars`로 작성하여 사용하여야 한다. 
+- `import` 기능을 활용하여 기존 `Resource`를 연동
+    - 단, Terraform Cloud를 사용하는 경우 `apply`, `plan`과 다르게 Cloud에 세팅되어있는 `variables set`등을 가져오지 못하므로(Local에서 작업이 실행됨) Terraform 코드 내에서 사용하는 variables를 `.tfvars`로 작성하여 사용하여야 한다. 
 
 
 
 ## EKS 버젼 업데이트하기
 
+실행 방안
+
+
+
 
 
 ## Spot Instance 도입기 
 
+**고려사항**
+
+
+
+
+
+**결정한 이유**
+
+
+
 
 
 ## Launch Template도입기
+
+**고려사항**
+
+
+
+
+
+**결정한 이유**
+
+
 
 
 
