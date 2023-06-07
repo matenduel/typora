@@ -919,6 +919,67 @@ You can see the core differences between these two constructs.
 
 
 
+## Secret Backend
+
+In addition to retrieving connections & variables from environment variables or the metastore database, you can also enable alternative secrets backend to retrieve Airflow connections or Airflow variables via [Apache Airflow Community provided backends](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/security/secrets/secrets-backend/index.html#community-secret-backends) in [Secret backends](https://airflow.apache.org/docs/apache-airflow-providers/core-extensions/secrets-backends.html).
+
+Note
+
+The Airflow UI only shows connections and variables stored in the Metadata DB and not via any other method. If you use an alternative secrets backend, check inside your backend to view the values of your variables and connections.
+
+You can also get Airflow configurations with sensitive data from the Secrets Backend. See [Setting Configuration Options](https://airflow.apache.org/docs/apache-airflow/stable/howto/set-config.html) for more details.
+
+### Search path
+
+When looking up a connection/variable, by default Airflow will search environment variables first and metastore database second.
+
+If you enable an alternative secrets backend, it will be searched first, followed by environment variables, then metastore. This search ordering is not configurable. Though, in some alternative secrets backend you might have the option to filter which connection/variable/config is searched in the secret backend. Please look at the documentation of the secret backend you are using to see if such option is available.
+
+Warning
+
+When using environment variables or an alternative secrets backend to store secrets or variables, it is possible to create key collisions. In the event of a duplicated key between backends, all write operations will update the value in the metastore, but all read operations will return the first match for the requested key starting with the custom backend, then the environment variables and finally the metastore.
+
+
+
+### Configuration
+
+The `[secrets]` section has the following options:
+
+```ini
+[secrets]
+backend =
+backend_kwargs =
+```
+
+
+
+Set `backend` to the fully qualified class name of the backend you want to enable.
+
+You can provide `backend_kwargs` with json and it will be passed as kwargs to the `__init__` method of your secrets backend.
+
+If you want to check which secret backend is currently set, you can use `airflow config get-value secrets backend` command as in the example below.
+
+```
+$ airflow config get-value secrets backend
+airflow.providers.google.cloud.secrets.secret_manager.CloudSecretManagerBackend
+```
+
+
+
+### Vault Secret Backend
+
+> https://airflow.apache.org/docs/apache-airflow-providers-hashicorp/stable/secrets-backends/hashicorp-vault.html
+
+```ini
+[secrets]
+backend = airflow.providers.hashicorp.secrets.vault.VaultBackend
+backend_kwargs = {"connections_path": "connections", "variables_path": "variables", "mount_point": "airflow", "url": "http://127.0.0.1:8200"}
+```
+
+
+
+
+
 ## DAG
 
 ### DAG Dependencies
