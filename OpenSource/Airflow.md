@@ -921,11 +921,11 @@ You can see the core differences between these two constructs.
 
 ## Secret Backend
 
-In addition to retrieving connections & variables from environment variables or the metastore database, you can also enable alternative secrets backend to retrieve Airflow connections or Airflow variables via [Apache Airflow Community provided backends](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/security/secrets/secrets-backend/index.html#community-secret-backends) in [Secret backends](https://airflow.apache.org/docs/apache-airflow-providers/core-extensions/secrets-backends.html).
+`Connections`와 `Variables`는 환경변수 또는 Metastore DB 이외에도 [Apache Airflow Community provided backends](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/security/secrets/secrets-backend/index.html#community-secret-backends)를 통해서도 설정할 수 있습니다. 
 
-Note
-
-The Airflow UI only shows connections and variables stored in the Metadata DB and not via any other method. If you use an alternative secrets backend, check inside your backend to view the values of your variables and connections.
+> **주의사항**
+>
+> Airflow UI 에서 보여지는 `connections`와 `variables`는 MetadataDB 에 저장되어있는 값만 표시됩니다. Vault와 같이 별도의 Secret Backend를 사용하고 있는 경우 해당 시스템을 통해서 확인하여야 합니다. 
 
 You can also get Airflow configurations with sensitive data from the Secrets Backend. See [Setting Configuration Options](https://airflow.apache.org/docs/apache-airflow/stable/howto/set-config.html) for more details.
 
