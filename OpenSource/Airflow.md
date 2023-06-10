@@ -927,23 +927,17 @@ You can see the core differences between these two constructs.
 >
 > Airflow UI 에서 보여지는 `connections`와 `variables`는 MetadataDB 에 저장되어있는 값만 표시됩니다. Vault와 같이 별도의 Secret Backend를 사용하고 있는 경우 해당 시스템을 통해서 확인하여야 합니다. 
 
-You can also get Airflow configurations with sensitive data from the Secrets Backend. See [Setting Configuration Options](https://airflow.apache.org/docs/apache-airflow/stable/howto/set-config.html) for more details.
-
 ### Search path
 
-When looking up a connection/variable, by default Airflow will search environment variables first and metastore database second.
+기본적으로 `Airflow`는 `connection` 또는 `variable`을 탐색할 때 환경변수와 Metastore DB 순으로 확인합니다. 만약 별도의 `Secret backend`를 사용하고 있는 경우, 해당 `backend`를 가장 먼저 탐색하며, 이어서 환경변수와 Metastore DB를 확인합니다. 일반적으로 탐색 순서는 변경할 수 없습니다. 하지만, 일부 `secret backend`의 경우, 별도의 필터링 옵션이 존재할 수 있으므로 문서를 확인해보아야 합니다. 
 
-If you enable an alternative secrets backend, it will be searched first, followed by environment variables, then metastore. This search ordering is not configurable. Though, in some alternative secrets backend you might have the option to filter which connection/variable/config is searched in the secret backend. Please look at the documentation of the secret backend you are using to see if such option is available.
-
-Warning
-
-When using environment variables or an alternative secrets backend to store secrets or variables, it is possible to create key collisions. In the event of a duplicated key between backends, all write operations will update the value in the metastore, but all read operations will return the first match for the requested key starting with the custom backend, then the environment variables and finally the metastore.
-
-
+> **주의사항**
+>
+> 환경 변수와 `secret backend` 등을 혼합하여 사용하는 경우 `Key` 충돌이 발생할 수 있습니다. 만약 `Key` 중복이 발생한 경우, 모든 쓰기 작업은 `Metastore DB`를 업데이트 하지만 읽기의 경우, `secret backend`부터 시작하여 환경 변수, `metastore DB` 순으로 탐색하면서 처음으로 일치하는 항목을 반환하게 됩니다. 
 
 ### Configuration
 
-The `[secrets]` section has the following options:
+`[secrets]` 섹션은 다음과 같은 옵션을 가지고 있습니다. 
 
 ```ini
 [secrets]
@@ -951,13 +945,16 @@ backend =
 backend_kwargs =
 ```
 
+`backend` 부분에는 사용할 `backend`의 `class` 이름을 기입하고, `backend_kwargs`는 json 형태로 작성합니다. `json` 포맷으로 입력된 `backend_kwrags`는  `__init__` 메소드를 통해 `secret backend class`로 전달됩니다. 
 
+```tex
+# Example - backend list
+airflow.contrib.secrets.aws_systems_manager.SystemsManagerParameterStoreBackend
+airflow.contrib.secrets.gcp_secrets_manager.CloudSecretsManagerBackend
+airflow.providers.hashicorp.secrets.vault.VaultBackend
+```
 
-Set `backend` to the fully qualified class name of the backend you want to enable.
-
-You can provide `backend_kwargs` with json and it will be passed as kwargs to the `__init__` method of your secrets backend.
-
-If you want to check which secret backend is currently set, you can use `airflow config get-value secrets backend` command as in the example below.
+현재 설정된 `secret backend`를 확인하고 싶은 경우, `airflow config get-value secrets backend`를 사용하면 됩니다. 
 
 ```
 $ airflow config get-value secrets backend
@@ -968,7 +965,9 @@ airflow.providers.google.cloud.secrets.secret_manager.CloudSecretManagerBackend
 
 ### Vault Secret Backend
 
-> https://airflow.apache.org/docs/apache-airflow-providers-hashicorp/stable/secrets-backends/hashicorp-vault.html
+> Backend Document -  https://airflow.apache.org/docs/apache-airflow-providers-hashicorp/stable/secrets-backends/hashicorp-vault.html
+>
+> Class Document - https://airflow.apache.org/docs/apache-airflow-providers-hashicorp/stable/_api/airflow/providers/hashicorp/secrets/vault/index.html
 
 ```ini
 [secrets]
@@ -976,7 +975,32 @@ backend = airflow.providers.hashicorp.secrets.vault.VaultBackend
 backend_kwargs = {"connections_path": "connections", "variables_path": "variables", "mount_point": "airflow", "url": "http://127.0.0.1:8200"}
 ```
 
+**사용법**
 
+- `{mount_point}/{connections_path|vaiables_path|config_path}/{connection_id|name}` 에 값을 저정해야한다. 
+- Variables는 `key`에 `vaule`를 입력한뒤, `vaule` 부분에 실제 값을 입력한다.
+
+
+
+### AWS Secrets Manager Backend
+
+>https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/secrets-backends/aws-secrets-manager.html
+
+```yaml
+[secrets]
+backend = airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend
+backend_kwargs = {
+  "connections_prefix": "airflow/connections",
+  "connections_lookup_pattern": null,
+  "variables_prefix": "airflow/variables",
+  "variables_lookup_pattern": null,
+  "config_prefix": "airflow/config",
+  "config_lookup_pattern": null,
+  "profile_name": "default"
+}
+```
+
+![aws-secrets-manager-json](./Airflow.assets/aws-secrets-manager-json.png)
 
 
 
