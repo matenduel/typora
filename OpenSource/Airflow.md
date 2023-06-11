@@ -145,6 +145,12 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 
 
+## 3.6. Template
+
+
+
+
+
 
 
 # 4. Configuration
@@ -153,23 +159,27 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 
 
+**Example**
+
+
+
+
+
 ## 4.2. values.yaml (Helm Chart)
 
 
 
-
-
-
-
-
+**Example**
 
 # 5. Basic
 
 ## 5.1. DAG
 
-### 5.1.1. Parameters
+> https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html
 
-* schedule_interval
+### Parameters
+
+**schedule**
 
 
 
@@ -203,7 +213,7 @@ Task간의 `upstream`, `downstream` dependencies를 통해 실행 순서를 정�
 
 
 
-## Task
+## 5.2. Task
 
 ### BaseOperator Parameters
 
@@ -407,8 +417,6 @@ The settings you can pass into `executor_config` vary by executor, so read the [
 
 최근 스케쥴만 실행시킨다는 점에서 `catchup`과 매우 유사합니다. 하지만, 실행되지 않은 과거 `DAG`을 아예 스케쥴링하지 않는 `catchup`과 다르게, `LastOnlyOperator`는 DAG이 실행된 상황에서 별도로 최신 작업 여부를 확인하고 하위 작업(downstream)의 스킵합니다. 그러므로, 과거 실행되었던 `DAG`을 재실행하는 경우, `catchup`은 모든 task가 재실행되지만 `LastOnlyOperator`는 하위 작업을 실행하지 않습니다. 
 
-
-
 **Summary**
 
 | Name             | 적용 단위 | 과거 작업 재실행 | 외부 실행(External Trigger) |
@@ -509,21 +517,25 @@ Much like Operators, Airflow has a large set of pre-built Sensors you can use, b
 
 ## Edge Labels
 
-As well as grouping tasks into groups, you can also label the *dependency edges* between different tasks in the Graph view - this can be especially useful for branching areas of your DAG, so you can label the conditions under which certain branches might run.
+`Task`를 그룹화 하는 것뿐만 아니라, 그래프 뷰(Graph view) 내에서 서로다른 `task`간의 `dependency edge`에 라벨을 추가할 수 있습니다. 라벨을 작성하면 `DAG` 분기 조건과 같은 정보를 더 직관적으로 확인할 수 있게 됩니다. 다음은 `Edge Label`이 적용된 `Graph view`를 보여줍니다. 
 
-To add labels, you can use them directly inline with the `>>` and `<<` operators:
+![../_images/edge_label_example.png](https://airflow.apache.org/docs/apache-airflow/stable/_images/edge_label_example.png)
 
-```
+
+
+**사용법**
+
+- `>>`와 `<<` 오퍼레이터를 이용하여 `Label`을 직접 추가할 수 있습니다. 
+
+```python
 from airflow.utils.edgemodifier import Label
 
 my_task >> Label("When empty") >> other_task
 ```
 
+- `set_upstream`/`set_downstream`에 `Label` 오브젝트를 추가로 전달합니다. 
 
-
-Or, you can pass a Label object to `set_upstream`/`set_downstream`:
-
-```
+```python
 from airflow.utils.edgemodifier import Label
 
 my_task.set_downstream(other_task, Label("When empty"))
@@ -531,23 +543,15 @@ my_task.set_downstream(other_task, Label("When empty"))
 
 
 
-Here’s an example DAG which illustrates labeling different branches:
-
-![../_images/edge_label_example.png](https://airflow.apache.org/docs/apache-airflow/stable/_images/edge_label_example.png)
-
-
-
 ## Dataset
 
 >In Airflow 2.4, the URI is not used to connect to an external system and there is no awareness of the content or location of the dataset
 
-`dataset`은 `producer` Task에 의해서 업데이트되며 `consumer` DAG을 스케쥴링하여 소비하게 합니다.
-
-
+**TL;DR - `dataset`은 `producer` Task에 의해서 업데이트되며 `consumer` DAG을 스케쥴링하여 소비하게 합니다.**
 
 `dataset`은 `TriggerDagRunOperator`와 매우 유사합니다. 하지만, 상위 작업이 하위 작업을 **직접** 실행하여야하는 `TriggerDagRunOperator`와 다르게, `dataset`은 중간 매개체인 `dataset`을 통해서 하위 작업이 스케쥴링됩니다. 따라서, `dataset`을 사용하는 경우 상위 작업(`producer`)을 수정하지 않고도 하위 작업(`consumer`)을 추가할 수 있습니다. 
 
-
+**How to use**
 
 `dataset`은 `Uniform Resource Identifier (URI)`를 통해서 정의되며 다음과 같이 사용합니다. 
 
@@ -669,13 +673,11 @@ logger = logging.getLogger("airflow.task")
 
 
 
-
-
-
-
 # 6. Advanced
 
 ## `.airflowignore`
+
+> https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html#airflowignore
 
 An `.airflowignore` file specifies the directories or files in `DAG_FOLDER` or `PLUGINS_FOLDER` that Airflow should intentionally ignore. Airflow supports two syntax flavors for patterns in the file, as specified by the `DAG_IGNORE_FILE_SYNTAX` configuration parameter (*added in Airflow 2.3*): `regexp` and `glob`.
 
@@ -1001,6 +1003,11 @@ backend_kwargs = {
 ```
 
 ![aws-secrets-manager-json](./Airflow.assets/aws-secrets-manager-json.png)
+
+**사용법**
+
+- `{mount_point}/{connections_path|vaiables_path|config_path}/{connection_id|name}` 에 값을 저정해야한다. 
+- Variables는 `key`에 `vaule`를 입력한뒤, `vaule` 부분에 실제 값을 입력한다.
 
 
 
