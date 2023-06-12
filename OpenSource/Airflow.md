@@ -1156,11 +1156,118 @@ class GithubTeamAuthorizer(AirflowSecurityManager):
 
 
 
+# Tips
+
+### Airflow Config 안전하게 전달하기
+
+기본적으로 Airflow의 모든 설정값은 `airfllow.cfg`외에도 환경변수(Environment Variables)를 통해서 값을 설정할 수 있습니다. 
+
+```
+# 환경변수 Format
+AIRFLOW__{SECTION}__{KEY}
+```
+
+예를 들어, `airfllow.cfg`내에서 `core`섹션(section)의 `default_timezone`를 `KST`로 변경하고 싶다면, 환경변수의 이름을 `AIRFLOW__CORE__DEFAULT_TIMEZONE`로 설정하면 값을 입력하면 됩니다. 
+
+```
+# airflow.cfg를 통해서 설정하는 경우
+[core]
+default_timezone='Asia/Seoul'
+
+# 환경변수를 통해서 설정하는 경우
+AIRFLOW__CORE__DEFAULT_TIMEZONE='Asia/Seoul'
+```
+
+
+
+하지만, DB 비밀번호와 같은 비밀값들을 `airflow.cfg` 또는 환경 변수를 통해서 운영, 관리하는 것은 위험합니다. 특히, 평문으로 기록된 비밀 값들이 Git을 통해 관리가 되고 있는 경우, 심각한 문제를 야기할 수 있습니다. 이러한 문제를 해결하기 위해서 `Airflow`는 비밀 값을 안전하게 관리하기 위한 2가지 방법을 제공합니다. 바로, `Command` 방식과 `Secret Backend`를 활용한 방식입니다.
+
+ `Command` 방식은 비밀 값을 획득할 수 있는 `Command`를 이용하여 비밀 값을 획득 및 사용하는 방식이며, 사용법은 다음과 같습니다. 
+
+```
+# airflow.cfg를 통해서 설정하는 경우
+[core]
+sql_alchemy_conn_secret='aws secretsmanager get-secret-value --secret-id=my_secret --output json | jq --raw-output .SecretString | jq -r .key'
+
+# 환경변수를 통해서 설정하는 경우
+AIRFLOW__CORE__SQL_ALCHEMY_CONN_SECRET='aws secretsmanager get-secret-value --secret-id=my_secret --output json | jq --raw-output .SecretString | jq -r .key'
+```
+
+예를 들어 `AWS Secret Manager`에 `sql_alchemy_conn` 정보를 입력해두었다면,  `airflow.cfg`내에서 다음과 같이 설정하면됩니다.  
+
+> 당연하게도 Command를 사용하는 방식이므로 관련된 Package들은 모두 서버에 설치되어 있어야 합니다. 
+
+```yaml
+[core]
+sql_alchemy_conn_secret: "aws secretsmanager get-secret-value --secret-id=my_secret --output json | jq --raw-output .SecretString | jq -r .key"
+```
+
+만약 환경변수(Environment Variables)를 통해서 설정하고 싶다면, 다음과 같이 환경변수를 설정하면 됩니다. 
+
+```
+AIRFLOW__CORE__SQL_ALCHEMY_CONN_SECRET='aws secretsmanager get-secret-value --secret-id=my_secret --output json | jq --raw-output .SecretString | jq -r .key'
+```
+
+
+
+`Secret Backend` 방식은 주어진 `path`를 이용하여 해당 비밀 값을 `secret backend`내에서 획득하여 사용하는 방식이며 사용법은 다음과 같습니다. 
+
+```
+AIRFLOW__{SECTION}__{KEY}_SECRET='PATH_TO_SECRET_IN_SECRET_BACKEND'
+```
+
+
+
+예를 들어 `vault`를 `Secret Backend`로 사용하고 있고, `airflow/config/sql_alchemy_conn_value`에 비밀을 저장해두었다면 `airflow.cfg`내에서 다음과 같이 설정하면됩니다.  
+
+```yaml
+[core]
+sql_alchemy_conn_secret: "sql_alchemy_conn_value"
+```
+
+만약 환경변수(Environment Variables)를 통해서 설정하고 싶다면, 다음과 같이 환경변수를 설정하면 됩니다. 
+
+```
+AIRFLOW__CORE__SQL_ALCHEMY_CONN_SECRET='sql_alchemy_conn_value'
+```
+
+`CMD` 방식과 `Secret Backend` 방식 모두 일부 설정값에 대해서 사용할 수 있으며 목록은 다음과 같습니다.  
+
+```
+[database] section
+sql_alchemy_conn
+
+[core] section
+fernet_key
+
+[celery] section
+broker_url
+flower_basic_auth
+result_backend
+
+[atlas] section
+password
+
+[smtp] section
+smtp_password
+
+[webserver] section
+secret_key
+```
+
+
+
+**Source Code - Config 처리**
+
+![airflow_source_code_config_part](./Airflow.assets/airflow_source_code_config_part.png)
+
+ 
 
 
 
 
-# 9. Trouble Shooting
+
+
 
 
 
