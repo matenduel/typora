@@ -16,7 +16,15 @@ https://docs.docker.com/get-started/overview/
 
 ## 장단점(Pro&Cons)
 
+**장점**
 
+- 
+
+
+
+**단점**
+
+- 
 
 
 
@@ -34,9 +42,143 @@ https://woochan-autobiography.tistory.com/468
 
 
 
+### 주의사항?
+
+- Linux 이야기
+- Platform 이야기
+
+> arm vs amd 64
+
+https://hub.docker.com/_/ubuntu/tags
+
+
+
+
+
+Uname provides your Linux system information and kernel version
+
+```cmd
+$ uname -m
+x86_64
+```
+
+
+
+Docker Image Arch 확인해보기
+
+```cmd
+$ docker inspect ubuntu
+[
+    {
+        "Id": "sha256:b6548eacb0639263e9d8abfee48f8ac8b327102a05335b67572f715c580a968e",
+        "RepoTags": [
+            "ubuntu:latest"
+        ],
+        "RepoDigests": [
+            "ubuntu@sha256:8eab65df33a6de2844c9aefd19efe8ddb87b7df5e9185a4ab73af936225685bb"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2023-12-01T07:49:50.47166003Z",
+        "Container": "4ed7528f35fc250695e3f439165effcfb665cc9c3abb1f390d7e61b1d609e285",
+        "ContainerConfig": {
+            "Hostname": "4ed7528f35fc",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/sh",
+                "-c",
+                "#(nop) ",
+                "CMD [\"/bin/bash\"]"
+            ],
+            "Image": "sha256:7c0bcaf4bbe2d12c08b11f40bbbe4934298aac7ce746f4ce4c2980d2d273a29b",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.version": "22.04"
+            }
+        },
+        "DockerVersion": "20.10.21",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/bash"
+            ],
+            "Image": "sha256:7c0bcaf4bbe2d12c08b11f40bbbe4934298aac7ce746f4ce4c2980d2d273a29b",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.version": "22.04"
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 77849732,
+        "VirtualSize": 77849732,
+        "GraphDriver": {
+            "Data": {
+                "MergedDir": "/var/lib/docker/overlay2/9da8d6e9eae15773c300c398a700253cf1f21742b9ed4784d2474fd29bb9c636/merged",
+                "UpperDir": "/var/lib/docker/overlay2/9da8d6e9eae15773c300c398a700253cf1f21742b9ed4784d2474fd29bb9c636/diff",
+                "WorkDir": "/var/lib/docker/overlay2/9da8d6e9eae15773c300c398a700253cf1f21742b9ed4784d2474fd29bb9c636/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:8ceb9643fb36a8ac65882c07e7b2fff9fd117673d6784221a83d3ad076a9733e"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "0001-01-01T00:00:00Z"
+        }
+    }
+]
+
+```
+
+
+
+
+
 
 
 ## Docker Hub
+
+> https://hub.docker.com/
+
+Registry 설명
+
+-> 왜 필요한가?
+
+Github, Gitlab, Bitbucket 등과 빗대어서 설명하기
 
 
 
@@ -84,8 +226,6 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 USER airflow
-
-
 ```
 
 
@@ -106,7 +246,6 @@ COPY
 WORKDIR
 
 RUN
-
 ```
 
 
@@ -119,40 +258,380 @@ RUN
 
 ## Command line (Docker CLI)
 
-- pull
-- list
-- rm
-- build
+**version**
+
+```cmd
+# Window
+$ docker version
+Client:
+ Cloud integration: v1.0.35+desktop.5
+ Version:           24.0.6
+ API version:       1.43
+ Go version:        go1.20.7
+ Git commit:        ed223bc
+ Built:             Mon Sep  4 12:32:48 2023
+ OS/Arch:           windows/amd64
+ Context:           default
+
+Server: Docker Desktop 4.25.2 (129061)
+ Engine:
+  Version:          24.0.6
+  API version:      1.43 (minimum version 1.12)
+  Go version:       go1.20.7
+  Git commit:       1a79695
+  Built:            Mon Sep  4 12:32:16 2023
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.6.22
+  GitCommit:        8165feabfdfe38c65b599c4993d227328c231fca
+ runc:
+  Version:          1.1.8
+  GitCommit:        v1.1.8-0-g82f18fe
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+```
 
 
 
-- attach
-- mount
-- port
-- env
-- buildx
+### Image 관련
+
+**pull**
+
+```cmd
+# By Tag
+$ docker pull <IMAGE_NAME>:<TAGS>
+
+# By Digest
+$ docker pull <IMAGE_NAME>:<DIGEST>
+```
 
 
 
-#### Option
+
+
+**list**
+
+```cmd
+# docker image ls [OPTIONS] [REPOSITORY[:TAG]]
+$ docker image ls
+
+# docker images [OPTIONS] [REPOSITORY[:TAG]]
+$ docker images
+```
+
+
+
+```cmd
+$ docker images --digests
+REPOSITORY                         TAG       DIGEST                                                                    IMAGE ID       CREATED         SIZE
+ubuntu                             <none>    sha256:38f5c03e32f9b3d2349bb3a096462866f8b44566b63a7fc3d5b4c75b55d108e1   246044f4effa   2 days ago      56.4MB
+ubuntu                             latest    sha256:8eab65df33a6de2844c9aefd19efe8ddb87b7df5e9185a4ab73af936225685bb   b6548eacb063   2 days ago      77.8MB
+```
+
+
+
+
+
+**push**
+
+```cmd
+$ docker push <IMAGE_NAME>:<TAGS>
+```
+
+
+
+> Image_name에 host가 포함된 경우
+>
+> ex) **docker push** `aws_account_id.dkr.ecr.us-west-2.amazonaws.com`**/**`my-repository:tag`
+>
+> 
+
+
+
+
+
+**rmi**
+
+```cmd
+# docker rmi [OPTIONS] IMAGE [IMAGE...]
+$ docker rmi <IMAGE_ID>
+```
+
+
+
+**build**
+
+```cmd
+# docker build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
+$ docker build . [-f <PATH_TO_FILE>]
+
+# or
+$ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
+```
+
+
+
+**tag**
+
+```cmd
+# docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+$ docker tag <SOURCE_IMAGE> <TARGET_IMAGE>
+```
+
+
+
+
+
+
+
+### Conatiner 관련
+
+**run**
+
+```cmd
+$ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```
+
+
+
+**ps**
+
+```cmd
+$ docker ps [OPTIONS]
+```
+
+
+
+**rm**
+
+```cmd
+$ docker rm [OPTIONS] CONTAINER [CONTAINER...]
+```
+
+
+
+**top**
+
+```cmd
+$ docker top CONTAINER [ps OPTIONS]
+```
+
+
+
+**attach**
+
+```cmd
+$ docker attach [OPTIONS] CONTAINER
+```
+
+
+
+```cmd
+
+```
+
+
+
+### Volume 관련
+
+**create**
+
+```cmd
+
+```
+
+**inspect**
+
+```cmd
+
+```
+
+**ls**
+
+```cmd
+
+```
+
+**prune**
+
+```cmd
+
+```
+
+**rm**
+
+```cmd
+
+```
+
+
+
+### Network 관련
+
+**connect**
+
+> Connect a container to a network
+
+```cmd
+
+```
+
+**disconnect**
+
+> Disconnect a container from a network
+
+```cmd
+
+```
+
+**create**
+
+> Create a network
+
+```cmd
+
+```
+
+**inspect**
+
+> Display detailed information on one or more networks
+
+```cmd
+
+```
+
+**ls**
+
+> List networks
+
+```cmd
+
+```
+
+**prune**
+
+> Remove all unused networks
+
+```cmd
+
+```
+
+**rm**
+
+> Remove one or more networks
+
+```cmd
+
+```
+
+
+
+### Buildx 관련
+
+**buildx**
+
+```cmd
+
+```
+
+
+
+#### Options
+
+-d, --detach
+
+
+
+-e, --env
+
+
+
+--name
+
+
+
+--rm
+
+
+
+-i
+
+
+
+-t
+
+
+
+-v, --version 
+
+> mount
+
+
+
+-p
+
+**port**
 
 
 
 ## 실습 & 연습문제
 
-#### #1
+#### 이미지 Pull 해보기 
+
+- By name
+- with specific tags
+- with digest
 
 
 
-#### #2
+- Ubuntu22.04
+- Postgresql
+- dpage/pgadmin4
 
-- 이미지 Pull
-- 이미지 삭제해보기
-- 이미지 build 하기
-- Application 배포해보기
-- Attach로 shell 접근해보기
-- .dockerignore 사용해서 ---
-- ARG 이용해서 build시 베이스 이미지 다르게 하기
+#### 이미지 삭제해보기
+
+
+
+
+
+#### 이미지 Build 해보기
+
+- Ubuntu에 ~~을 설치하기
+- ~~ 코드/스크립트를 복사하기
+
+
+
+#### Tag 변경하기
+
+
+
+#### Container Shell에 접근하기
+
+
+
+#### `.dockerignore`를 사용하여 특정 파일 제외하기
+
+
+
+#### ARG를 활용하여 base Image를 변경(?)하기
+
+
+
+
+
+#### Image를 이용하여 Application 배포하기
+
+- PgAdmin4
+
+
+
+#### Volume을 이용하여 (DB) 데이터 보존하기
+
+
+
+
 
 
 
@@ -166,21 +645,48 @@ RUN
 
 ### 컨테이너 관리의 필요성
 
+- 서비스는 일반적으로 여러개의 서버로 구성됨(Web, DB, Cache, ...)
+- 필요한 갯수만큼 항상 동작되고 있어야함. (종료된 경우에도 다시 실행되어야함)
+- 
+
 
 
 ### 장점 & 단점
 
+**장점**
 
+
+
+**단점**
 
 
 
 ## Docker Compose CLI
 
-- up
-- down
-- stop
-- logs
-- ...
+#### up
+
+```
+```
+
+
+
+#### down
+
+
+
+#### stop
+
+
+
+#### logs
+
+
+
+#### restart
+
+
+
+#### top
 
 
 
@@ -477,11 +983,29 @@ volumes:
 
 ## 실습 & 연습문제
 
-#### #1
+#### 서비스 배포하기
 
 
 
-#### #2
+#### 2개의 서비스를 동일 Network로 묶기
+
+> 별도의 expose없이 DB 접근하기, ...
+
+- PostgreSQL + PgAdmin
+
+
+
+#### Volume을 이용하여 Local File system을 이용하지 않고 파일 공유하기
+
+-> Git Sync
+
+
+
+#### depend_on을 이용하여 초기 설정 세팅하기?
+
+-> 소규모 Web Server (Java? Python?)
+
+
 
 
 
