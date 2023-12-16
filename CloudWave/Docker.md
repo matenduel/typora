@@ -206,6 +206,82 @@ Github, Gitlab, Bitbucket 등과 빗대어서 설명하기
 
 > https://docs.docker.com/desktop/install/linux-install/
 
+- Set up Docker's `apt` repository.
+
+```sh
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+```
+
+
+
+- Install the Docker packages.
+
+```sh
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+
+
+- Docker 버젼 확인
+
+```cmd
+$ docker version
+Client: Docker Engine - Community
+ Version:           24.0.7
+ API version:       1.43
+ Go version:        go1.20.10
+ Git commit:        afdd53b
+ Built:             Thu Oct 26 09:07:41 2023
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          24.0.7
+  API version:      1.43 (minimum version 1.12)
+  Go version:       go1.20.10
+  Git commit:       311b9ff
+  Built:            Thu Oct 26 09:07:41 2023
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.6.25
+  GitCommit:        d8f198a4ed8892c764191ef7b3b06d8a2eeb5c7f
+ runc:
+  Version:          1.1.10
+  GitCommit:        v1.1.10-0-g18a0cb0
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+```
+
+
+
+
+
+#### Q&A
+
+**Permission Denied**
+
+```cmd
+cloudwave@cloudwave-Standard-PC-i440FX-PIIX-1996:~$ docker images
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/images/json": dial unix /var/run/docker.sock: connect: permission denied
+```
+
+
+
 
 
 ## Dockerfile & 문법
@@ -258,7 +334,7 @@ RUN
 
 ## Command line (Docker CLI)
 
-**version**
+**버젼 확인**
 
 ```cmd
 # Window
@@ -295,9 +371,11 @@ Server: Docker Desktop 4.25.2 (129061)
 
 
 
-### Image 관련
+### 이미지 다루기
 
-**pull**
+#### **pull - 이미지 다운로드**
+
+> https://docs.docker.com/engine/reference/commandline/pull/
 
 ```cmd
 # By Tag
@@ -307,11 +385,15 @@ $ docker pull <IMAGE_NAME>:<TAGS>
 $ docker pull <IMAGE_NAME>:<DIGEST>
 ```
 
+**Options**
+
+```
+--platform
+```
 
 
 
-
-**list**
+#### **list - 이미지 목록**
 
 ```cmd
 # docker image ls [OPTIONS] [REPOSITORY[:TAG]]
@@ -321,7 +403,7 @@ $ docker image ls
 $ docker images
 ```
 
-
+**Options**
 
 ```cmd
 $ docker images --digests
@@ -332,27 +414,9 @@ ubuntu                             latest    sha256:8eab65df33a6de2844c9aefd19ef
 
 
 
+#### **rmi - 이미지 삭제**
 
-
-**push**
-
-```cmd
-$ docker push <IMAGE_NAME>:<TAGS>
-```
-
-
-
-> Image_name에 host가 포함된 경우
->
-> ex) **docker push** `aws_account_id.dkr.ecr.us-west-2.amazonaws.com`**/**`my-repository:tag`
->
-> 
-
-
-
-
-
-**rmi**
+> https://docs.docker.com/engine/reference/commandline/rmi/
 
 ```cmd
 # docker rmi [OPTIONS] IMAGE [IMAGE...]
@@ -361,7 +425,9 @@ $ docker rmi <IMAGE_ID>
 
 
 
-**build**
+#### **build - 이미지 제작**
+
+> https://docs.docker.com/engine/reference/commandline/build/
 
 ```cmd
 # docker build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
@@ -373,7 +439,9 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 
 
-**tag**
+#### **tag - 이미지 태그 관리**
+
+> https://docs.docker.com/engine/reference/commandline/tag/
 
 ```cmd
 # docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
@@ -382,13 +450,24 @@ $ docker tag <SOURCE_IMAGE> <TARGET_IMAGE>
 
 
 
+#### **push - 이미지 올리기**
 
+> https://docs.docker.com/engine/reference/commandline/push/
+
+```cmd
+$ docker push <IMAGE_NAME>:<TAGS>
+```
+
+> Image_name에 host가 포함된 경우
+>
+> ex) **docker push** `aws_account_id.dkr.ecr.us-west-2.amazonaws.com`**/**`my-repository:tag`
+>
 
 
 
 ### Conatiner 관련
 
-**run**
+#### **run - 컨테이너 실행**
 
 ```cmd
 $ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
@@ -396,7 +475,7 @@ $ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 
 
-**ps**
+#### **ps - 컨테이너 목록**
 
 ```cmd
 $ docker ps [OPTIONS]
@@ -404,7 +483,7 @@ $ docker ps [OPTIONS]
 
 
 
-**rm**
+#### **rm - 컨테이너 삭제**
 
 ```cmd
 $ docker rm [OPTIONS] CONTAINER [CONTAINER...]
@@ -412,7 +491,7 @@ $ docker rm [OPTIONS] CONTAINER [CONTAINER...]
 
 
 
-**top**
+#### **top - **
 
 ```cmd
 $ docker top CONTAINER [ps OPTIONS]
@@ -420,7 +499,7 @@ $ docker top CONTAINER [ps OPTIONS]
 
 
 
-**attach**
+#### **attach - **
 
 ```cmd
 $ docker attach [OPTIONS] CONTAINER
@@ -428,49 +507,51 @@ $ docker attach [OPTIONS] CONTAINER
 
 
 
-```cmd
+#### **commit**
 
-```
+> https://tttsss77.tistory.com/230
+
+
 
 
 
 ### Volume 관련
 
-**create**
+#### **create**
 
 ```cmd
 
 ```
 
-**inspect**
+#### **inspect**
 
 ```cmd
 
 ```
 
-**ls**
+#### **ls**
 
 ```cmd
-
+docker volume ls
 ```
 
-**prune**
+#### **prune**
 
 ```cmd
-
+docker volume prune
 ```
 
-**rm**
+#### **rm**
 
 ```cmd
-
+docker volume rm
 ```
 
 
 
 ### Network 관련
 
-**connect**
+#### **connect**
 
 > Connect a container to a network
 
@@ -478,7 +559,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**disconnect**
+#### **disconnect**
 
 > Disconnect a container from a network
 
@@ -486,7 +567,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**create**
+#### **create**
 
 > Create a network
 
@@ -494,7 +575,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**inspect**
+#### **inspect**
 
 > Display detailed information on one or more networks
 
@@ -502,7 +583,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**ls**
+#### **ls**
 
 > List networks
 
@@ -510,7 +591,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**prune**
+#### **prune**
 
 > Remove all unused networks
 
@@ -518,7 +599,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ```
 
-**rm**
+#### **rm**
 
 > Remove one or more networks
 
@@ -530,7 +611,7 @@ $ docker attach [OPTIONS] CONTAINER
 
 ### Buildx 관련
 
-**buildx**
+#### **buildx**
 
 ```cmd
 
@@ -576,21 +657,155 @@ $ docker attach [OPTIONS] CONTAINER
 
 
 
-## 실습 & 연습문제
+## 실습
 
-#### 이미지 Pull 해보기 
-
-- By name
-- with specific tags
-- with digest
+### DB(PostgreSQL) 설치하기
 
 
+
+
+
+### Application과 연결하기
+
+
+
+
+
+## 연습문제
+
+#### 이미지 Pull 해보기
+
+```shell 
+# Default - latest
+docker pull postgres
+
+# By name
+docker pull postgres:latest
+
+# By digest
+docker pull postgres@sha256:a2282ad0db623c27f03bab803975c9e3942a24e974f07142d5d69b6b8eaaf9e2
+```
 
 - Ubuntu22.04
 - Postgresql
 - dpage/pgadmin4
 
+
+
 #### 이미지 삭제해보기
+
+```
+```
+
+
+
+
+
+#### Container Shell에 접근하기
+
+DB 실행하기
+
+>Version = 16.1-bullseye
+>
+>name = db
+
+```shell
+docker run --rm -d --name db -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
+```
+
+
+
+Log 확인하기
+
+```shell
+docker logs db -f
+```
+
+
+
+Shell 접근하기 
+
+> Table 생성
+
+```shell
+# Attach -> crtl+p+q
+docker attach db
+
+# Exec
+docker exec -it db /bin/bash
+```
+
+
+
+```shell
+# DB 접속
+psql -U postgres
+
+# Schema 확인
+SELECT schema_name FROM information_schema.schemata;
+\dn
+
+# Table 확인
+\dt
+
+# Table 생성
+CREATE TABLE star (
+    id integer NOT NULL,
+    name character varying(255),
+    class character varying(32),
+    age integer,
+    radius integer,
+    lum integer,
+    magnt integer,
+    CONSTRAINT star_pk PRIMARY KEY (id)
+);
+# Table 확인
+\dt
+```
+
+
+
+Container 종료 후 재시작
+
+> 데이터 살아있는거 체크
+
+
+
+db 외부 접속 가능하게 만들기
+
+> 1차 생성불가 -> 이유 설명
+>
+> 기존 컨테이너 삭제 또는 이름 변경
+
+```shell
+docker run --rm -d -p 5432:5432 --name db -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
+```
+
+
+
+DB 데이터가 남아있는지 확인하기 -> 없는거 확인 후 설명 RW Layer
+
+> rm 옵션
+
+
+
+#### Volume을 이용하여 (DB) 데이터 보존하기
+
+> volume = db_data
+
+
+
+
+
+#### Image를 이용하여 Application 배포하기
+
+- PgAdmin4
+
+```shell
+docker pull dpage/pgadmin4:7.4
+
+docker run -d -p 80:80 --name pgadmin -e PGADMIN_DEFAULT_EMAIL=admin@cloudwave.com -e PGADMIN_DEFAULT_PASSWORD=SuperSecret dpage/pgadmin4:7.4
+```
 
 
 
@@ -598,16 +813,10 @@ $ docker attach [OPTIONS] CONTAINER
 
 #### 이미지 Build 해보기
 
+> WebServer예제 준비
+
 - Ubuntu에 ~~을 설치하기
 - ~~ 코드/스크립트를 복사하기
-
-
-
-#### Tag 변경하기
-
-
-
-#### Container Shell에 접근하기
 
 
 
@@ -621,15 +830,28 @@ $ docker attach [OPTIONS] CONTAINER
 
 
 
-#### Image를 이용하여 Application 배포하기
+#### Tag 변경하기
 
-- PgAdmin4
+```shell
+
+```
+
+- postgresql을 실행하기
+- Container shell에 접근하여 테이블 생성하기
+- Volumne을 이용하여 데이터 보존하기 
 
 
 
-#### Volume을 이용하여 (DB) 데이터 보존하기
+#### 이미지 Push 하기
+
+```
+```
 
 
+
+#### 
+
+---
 
 
 
@@ -645,9 +867,8 @@ $ docker attach [OPTIONS] CONTAINER
 
 ### 컨테이너 관리의 필요성
 
-- 서비스는 일반적으로 여러개의 서버로 구성됨(Web, DB, Cache, ...)
+- 서비스는 일반적으로 여러개의 서버(또는 Process)로 구성됨(Web, DB, Cache, ...)
 - 필요한 갯수만큼 항상 동작되고 있어야함. (종료된 경우에도 다시 실행되어야함)
-- 
 
 
 
