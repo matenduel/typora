@@ -140,19 +140,17 @@ docker image ls
 
 > https://docs.docker.com/engine/reference/commandline/rmi/
 
+`docker rmi`는 한 개 이상의 명시된 이미지들을 삭제하는 명령입니다. 
+
 ```shell
 docker rmi [OPTIONS] IMAGE [IMAGE...]
 
 # Alias
 docker image rm
 
-# Remove the unused images
-docker image prune
 ```
 
-
-
-**Option 목록**
+**주요 Options**
 
 | Option       | Short | Default | Description                               |
 | ------------ | ----- | ------- | ----------------------------------------- |
@@ -161,9 +159,25 @@ docker image prune
 
 
 
-**주의사항**
+> https://docs.docker.com/engine/reference/commandline/image_prune/
 
-- 컨테이너가 존재할 경우 이미지를 삭제할 수 없습니다. 
+`volume prune`은 사용하지 않는 모든 볼륨을 삭제하는 명령어 입니다.
+
+```sh
+# Remove the dangling or unused images
+docker image prune
+docker image prune --all
+```
+
+**주요 Options**
+
+| Option     | Short | Default | Description                                      |
+| ---------- | ----- | ------- | ------------------------------------------------ |
+| `--all`    | `-a`  |         | Remove all unused images, not just dangling ones |
+| `--filter` |       |         | Provide filter values (e.g. `until=<timestamp>`) |
+| `--force`  | `-f`  |         | Do not prompt for confirmation                   |
+
+
 
 
 
@@ -1292,7 +1306,7 @@ docker push [OPTIONS] NAME[:TAG]
 
 
 
-##### full image name 포맷
+#### full image name 포맷
 
 ```tex
 [HOST[:PORT_NUMBER]/]PATH
@@ -1392,8 +1406,6 @@ NAME                   DESCRIPTION   STARS     OFFICIAL   AUTOMATED
 > - 연습하기에 앞서 AWS IAM 및 ECR 생성이 필요합니다.
 >
 > - `1.3`에서 제작한 `ubuntu`이미지(`cloudwave:base.v1`)를 사용합니다. 
-
-
 
 다음 명령어를 통해 `Host`에 설치된 Docker Daemon을 컨테이너에 바인드합니다. 
 
@@ -1660,10 +1672,6 @@ docker volume prune [OPTIONS]
 
 
 
-
-
-
-
 ---
 
 ### Practice
@@ -1675,9 +1683,9 @@ docker volume prune [OPTIONS]
 >- 이미지 = postgres:16.1-bullseye
 >- Container 이름 = db
 >- Container 생성시 다음 환경변수가 설정되어야 합니다. 
->  - POSTGRES_PASSWORD
->- `db_data`라는 이름을 가진 Volume을 생성하고, 해당 볼륨을 컨테이너의 `/var/lib/postgresql/data`에 마운트합니다. 
+>     - POSTGRES_PASSWORD
 >- Container는 `--rm` 옵션을 부여하여 생성합니다. 
+>- 생성한 Volume은 컨테이너의 `/var/lib/postgresql/data`에 마운트합니다. 
 
 
 
@@ -1731,9 +1739,9 @@ CREATE TABLE IF NOT EXISTS cloud_wave (
 ```cmd
 postgres=# \dt
                List of relations
- Schema |        Name        | Type  |  Owner
---------+--------------------+-------+----------
- public | savepaint_img_data | table | postgres
+ Schema |    Name    | Type  |  Owner
+--------+------------+-------+----------
+ public | cloud_wave | table | postgres
 (1 row)
 ```
 
@@ -1771,9 +1779,9 @@ Type "help" for help.
 # Table 목록
 postgres=# \dt
                List of relations
- Schema |        Name        | Type  |  Owner
---------+--------------------+-------+----------
- public | savepaint_img_data | table | postgres
+ Schema |    Name    | Type  |  Owner
+--------+------------+-------+----------
+ public | cloud_wave | table | postgres
 (1 row)
 ```
 
@@ -1966,6 +1974,19 @@ $ docker network create -d bridge private
 
 ```sh
 docker network ls [OPTIONS]
+
+Aliases:
+  docker network ls, docker network list
+```
+
+
+
+#### [예제] `host` 네트워크만 조회하기
+
+```cmd
+$ docker network ls -f driver=host
+NETWORK ID     NAME      DRIVER    SCOPE
+b107e82764b5   host      host      local
 ```
 
 
@@ -1976,6 +1997,44 @@ docker network ls [OPTIONS]
 
 ```sh
 docker network inspect [OPTIONS] NETWORK [NETWORK...]
+```
+
+
+
+**output**
+
+```cmd
+$ docker network inspect private
+[
+    {
+        "Name": "private",
+        "Id": "04f294f613b357014305f09af1ae31fded48ae663ad451ed65f6c4043045fb9d",
+        "Created": "2023-12-23T05:29:53.303432435Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.19.0.0/16",
+                    "Gateway": "172.19.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
 ```
 
 
@@ -2000,7 +2059,7 @@ docker network disconnect [OPTIONS] NETWORK CONTAINER
 
 
 
-### 네트워크 제거
+### 네트워크 삭제
 
 > https://docs.docker.com/engine/reference/commandline/network_rm/
 
@@ -2012,15 +2071,15 @@ docker network rm NETWORK [NETWORK...]
 
 
 
-
-
 > https://docs.docker.com/engine/reference/commandline/network_prune/
 
-`network prune`은 사용하지 않는 모든 네트워크들을 삭제하는 명령어 입니다.
+`network prune`은 **사용하지 않는** 모든 네트워크들을 삭제하는 명령어 입니다.
 
 ```sh
 docker network prune [OPTIONS]
 ```
+
+
 
 
 
@@ -2039,7 +2098,7 @@ private
 
 
 
-생성된 Network는 `docker network list` 명령어를 통해서 확인할 수 있습니다. 
+생성된 네트워크는 `docker network list` 명령어를 통해서 확인할 수 있습니다. 
 
 ```cmd
 $ docker network list
@@ -2069,7 +2128,6 @@ $ docker run --rm -d -p 80:80 --name pgadmin -e PGADMIN_DEFAULT_EMAIL=user@sampl
 ```cmd
 $ docker inspect db -f '{{range $k, $v := .NetworkSettings.Networks}}{{print $k}}={{println $v.IPAddress}}{{end}}'
 bridge=172.17.0.3
-
 ```
 
 
@@ -2088,7 +2146,7 @@ bridge=172.17.0.3
 
 
 - 접속할 `DB`서버 정보를 입력합니다. 
-  - host: `bridge` 네트워크의 IP
+  - host: `bridge` 네트워크에서 할당된 IP
   - Username: `postgres`
   - Password: 컨테이너 실행시 입력한 `POSTGRES_PASSWORD` 
 
@@ -2098,7 +2156,7 @@ bridge=172.17.0.3
 
 
 
-이번엔 위에서 생성한 `private` 네트워크를 `DB`에 연결한 이후, `private` 네트워크에 할당된 `IP` 주소를 확인합니다. 
+이번엔 위에서 생성한 `private` 네트워크를 `DB`에 연결한 이후, `private` 네트워크에서 할당된 `IP` 주소를 확인합니다. 
 
 ```cmd
 $ docker network connect private db
@@ -2123,21 +2181,120 @@ private=172.18.0.3
 
 
 
-=> ping 방식으로 변경할까?
+#### [연습] `alias`를 이용하여 `ip`없이 컨테이너 통신하기
 
-https://k1005.github.io/2023/01/29/docker-network/
+다음과 같이 `ubuntu` 컨테이너를 생성하고 필요한 `Package`를 생성합니다. 
 
-https://www.daleseo.com/docker-networks/
-
-
-
-#### [실습] Hostname 설정하기? or Host network Test
-
-```
-docker run -v C:\Users\MINI\Documents\repo\cloud_wave\docker_sample\volume\fastapi\app:/code/app -p 8080:80 was:fast.2 
+```cmd
+$ docker run --name main -itd ubuntu:22.04
+$ docker exec main /bin/bash -c "apt-get update && apt-get upgrade && apt-get install -y wget dnsutils"
 ```
 
--> Host에서 해당 컨테이너 내부에서 실행중인 서비스에 접근이 되는지 체크해서 예제로 사용
+
+
+`nginx` 컨테이너를 다음과 같이 3개 생성합니다. 
+
+```cmd
+$ docker run --rm -d --net private --net-alias web_app --name nginx1 nginx:latest
+$ docker run --rm -d --net private --net-alias web_app --name nginx2 nginx:latest
+$ docker run --rm -d --net private --net-alias web_app --net-alias ready --name nginx3 nginx:latest
+```
+
+
+
+`main` 컨테이너에서 `web_app`에 대해 `dig`을 사용하면, 다음과 같이 `DNS` 질의에 대한 응답이 없는 것을 확인할 수 있습니다. 
+
+> `nslookup web_app`을 이용하여 확인해도 됩니다. 
+
+```cmd
+$ docker exec main dig web_app
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.1-Ubuntu <<>> web_app
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 53782
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: bcdc7ef17f1d57fd (echoed)
+;; QUESTION SECTION:
+;web_app.			IN	A
+
+;; Query time: 5 msec
+;; SERVER: 127.0.0.11#53(127.0.0.11) (UDP)
+;; WHEN: Sat Dec 23 07:59:12 UTC 2023
+;; MSG SIZE  rcvd: 48
+```
+
+
+
+`main` 컨테이너에 `private` 네트워크를 다음과 같이 연결합니다. 
+
+```cmd
+$ docker network connect --alias main private main
+$ docker inspect main -f "Alias:{{ println .NetworkSettings.Networks.private.Aliases }}IP:{{ println .NetworkSettings.Networks.private.IPAddress }}"
+Alias:[main 51c471535b96]
+IP:172.19.0.5
+```
+
+
+
+다시 한번 `main` 서버에서 `dig`를 사용하면 3개 컨테이너의 `IP`가 반환된 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker exec main dig web_app
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.1-Ubuntu <<>> web_app
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43503
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;web_app.			IN	A
+
+;; ANSWER SECTION:
+web_app.		600	IN	A	172.19.0.4
+web_app.		600	IN	A	172.19.0.2
+web_app.		600	IN	A	172.19.0.3
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.11#53(127.0.0.11) (UDP)
+;; WHEN: Sat Dec 23 07:51:11 UTC 2023
+;; MSG SIZE  rcvd: 94
+```
+
+
+
+다음과 같이 `ping`을 사용할 때마다 응답하는 `IP`가 바뀌는 것을 볼 수 있습니다. 
+
+```cmd
+$ docker exec main apt-get install -y iputils-ping
+$ docker exec main ping web_app
+PING web_app (172.19.0.2) 56(84) bytes of data.
+64 bytes from nginx1.private (172.19.0.2): icmp_seq=1 ttl=64 time=0.060 ms
+64 bytes from nginx1.private (172.19.0.2): icmp_seq=2 ttl=64 time=0.075 ms
+64 bytes from nginx1.private (172.19.0.2): icmp_seq=3 ttl=64 time=0.076 ms
+...
+$ docker exec main ping web_app
+PING web_app (172.19.0.4) 56(84) bytes of data.
+64 bytes from nginx3.private (172.19.0.4): icmp_seq=1 ttl=64 time=0.136 ms
+64 bytes from nginx3.private (172.19.0.4): icmp_seq=2 ttl=64 time=0.073 ms
+...
+```
+
+
+
+#### [실습] 연습 문제(`bridge` 네트워크를 이용하여 컨테이너 연결하기)에서 생성한 `DB`를 `alias`를 이용하여 연결하기
+
+> 
+
+- 
+
+
+
+
 
 
 
@@ -2149,13 +2306,92 @@ docker run -v C:\Users\MINI\Documents\repo\cloud_wave\docker_sample\volume\fasta
 
 ### Docker commit
 
-It can be useful to commit a container's file changes or settings into a new image. This allows you to debug a container by running an interactive shell, or to export a working dataset to another server. Generally, it is better to use Dockerfiles to manage your images in a documented and maintainable way. [Read more about valid image names and tags](https://docs.docker.com/engine/reference/commandline/tag/).
+> https://docs.docker.com/engine/reference/commandline/commit/
 
-The commit operation will not include any data contained in volumes mounted inside the container.
+```shell
+docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
+```
 
-By default, the container being committed and its processes will be paused while the image is committed. This reduces the likelihood of encountering data corruption during the process of creating the commit. If this behavior is undesired, set the `--pause` option to false.
+**주요 Options**
 
-The `--change` option will apply `Dockerfile` instructions to the image that is created. Supported `Dockerfile` instructions: `CMD`|`ENTRYPOINT`|`ENV`|`EXPOSE`|`LABEL`|`ONBUILD`|`USER`|`VOLUME`|`WORKDIR`
+| Option      | Short | Default | Description                                                |
+| ----------- | ----- | ------- | ---------------------------------------------------------- |
+| `--author`  | `-a`  |         | Author (e.g., `John Hannibal Smith <hannibal@a-team.com>`) |
+| `--change`  | `-c`  |         | Apply Dockerfile instruction to the created image          |
+| `--message` | `-m`  |         | Commit message                                             |
+| `--pause`   | `-p`  | `true`  | Pause container during commit                              |
+
+
+
+**주의사항**
+
+- `Production`에서 사용할 이미지라면 `commit` 대신  `Dockerfile`을 기반으로 제작하는 것이 좋습니다. 
+- 마운트된 볼륨(`volume`)에 저장된 데이터는 포함되지 않습니다. 
+- `--pause` 옵션을 설정하지 않은 경우, `commit`하는 동안 컨테이너를 중지(`pause`)합니다. 
+- `--change`에서 지원하는 명령어는 다음과 같습니다
+    - CMD
+    - ENTRYPOINT
+    - ENV
+    - EXPOSE
+    - LABEL
+    - ONBUILD
+    - USER
+    - VOLUME
+    - WORKDIR
+
+
+
+### Docker buildx
+
+> https://docs.docker.com/engine/reference/commandline/buildx/
+
+Extended build capabilities with BuildKit
+
+https://gurumee92.tistory.com/311
+
+#### build
+
+
+
+
+
+
+
+
+
+### Docker Scout ?
+
+> https://docs.docker.com/engine/reference/commandline/scout/
+
+#### cves
+
+> https://docs.docker.com/engine/reference/commandline/scout_cves/
+
+```shell
+docker scout cves [OPTIONS] [IMAGE|DIRECTORY|ARCHIVE]
+```
+
+
+
+#### quickview
+
+> https://docs.docker.com/engine/reference/commandline/scout_quickview/
+
+```shell
+docker scout quickview [IMAGE|DIRECTORY|ARCHIVE]
+```
+
+
+
+
+
+
+
+### Docker Trust -> 간략하게
+
+> https://docs.docker.com/engine/reference/commandline/trust/
+
+
 
 
 
@@ -2163,21 +2399,21 @@ The `--change` option will apply `Dockerfile` instructions to the image that is 
 
 ### 연습 문제
 
-#### [연습] Commit을 이용하여 데이터를 유지한 Image 생성하기
+#### [연습] Commit을 이용하여 패키지가 설치된 이미지 생성하기
 
-`Ubuntu` 컨테이너를 실행합니다. 
+다음과 같이 `Ubuntu` 컨테이너를 실행합니다. 
 
 ```cmd
-$ docker run -it -d --name server ubuntu:22.04
+$ docker run -it -d --name base ubuntu:22.04
 ebb9fe13e5cfb0747e5bea1db7c41ef30bf416bdcd643d7311e161ee4300b628
 ```
 
 
 
-`curl`이 설치되어 있는지 확인합니다. 
+`curl`이 설치 여부를 확인합니다. 
 
 ```cmd
-$ docker exec server apt list --installed "curl*"
+$ docker exec base apt list --installed "curl*"
 WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
 
 Listing...
@@ -2185,12 +2421,12 @@ Listing...
 
 
 
-Curl을 설치한 이후, 설치 여부를 재확인합니다. 
+다음과 같이 `Curl`을 설치한 후, 설치 여부를 재확인합니다. 
 
 ```cmd
-$ docker exec server /bin/bash -c "apt-get update && apt-get upgrade && apt-get install curl -y"
+$ docker exec base /bin/bash -c "apt-get update && apt-get upgrade && apt-get install -y curl"
 
-$ docker exec server apt list --installed "curl*"
+$ docker exec base apt list --installed "curl*"
 
 WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
 
@@ -2200,10 +2436,10 @@ curl/jammy-updates,jammy-security,now 7.81.0-1ubuntu1.15 amd64 [installed]
 
 
 
-curl이 설치된 ubuntu 컨테이너를 commit합니다. 
+`commit`을 이용하여 `base` 컨테이너를 다음과 같이 저장합니다. 
 
 ```cmd
-$ docker commit server commit:v1
+$ docker commit base commit:v1
 sha256:56c923d569eccda8bd094286ca7356ea2fa1a3a7794df6f22369980dd78bc943
 
 $ docker images commit
@@ -2213,7 +2449,7 @@ commit       v1        56c923d569ec   16 seconds ago   132MB
 
 
 
-저장된 Image를 실행하여 curl이 설치되어 있는지 확인합니다. 
+저장된 이미지를 실행하여 `curl`이 설치되어 있는지 확인합니다. 
 
 ```cmd
 $ docker run --name restore commit:v1 apt list --installed "curl*"
@@ -2226,32 +2462,63 @@ curl/jammy-updates,jammy-security,now 7.81.0-1ubuntu1.15 amd64 [installed]
 
 
 
-#### [연습] 기존 컨테이너에 Port 추가하기
+#### [연습] 실행중인 컨테이너를 이용하여 Port를 추가로 `Expose`하기
 
-> 새로 만들어야함
+컨테이너를 다음과 같이 생성하고, `Port`가 노출되지 않은 것을 체크합니다다. 
 
 ```cmd
+$ docker run -it -d --name base ubuntu:22.04
 $ docker ps
-
-CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS              NAMES
-c3f279d17e0a        ubuntu:22.04        /bin/bash           7 days ago          Up 25 hours                            desperate_dubinsky
-197387f1b436        ubuntu:22.04        /bin/bash           7 days ago          Up 25 hours                            focused_hamilton
-
-$ docker commit --change='CMD ["apachectl", "-DFOREGROUND"]' -c "EXPOSE 80" c3f279d17e0a  svendowideit/testimage:version4
-
-f5283438590d
-
-$ docker run -d svendowideit/testimage:version4
-
-89373736e2e7f00bc149bd783073ac43d0507da250e999f3f1036e0db60817c0
-
-$ docker ps
-
-CONTAINER ID        IMAGE               COMMAND                 CREATED             STATUS              PORTS              NAMES
-89373736e2e7        testimage:version4  "apachectl -DFOREGROU"  3 seconds ago       Up 2 seconds        80/tcp             distracted_fermat
-c3f279d17e0a        ubuntu:22.04        /bin/bash               7 days ago          Up 25 hours                            desperate_dubinsky
-197387f1b436        ubuntu:22.04        /bin/bash               7 days ago          Up 25 hours                            focused_hamilton
+CONTAINER ID   IMAGE          COMMAND                   CREATED       STATUS       PORTS     NAMES
+51c471535b96   ubuntu:22.04   "/bin/bash"              2 hours ago   Up 2 hours             base
 ```
+
+
+
+다음과 같이 80번 포트를 `Expose`하는 명령어를 추가하여 실행중인 컨테이너를 `commit` 합니다. 
+
+```cmd
+$ docker commit --change="EXPOSE 80" base commit:v1
+sha256:f908d82f79101ec792d5383a627c8ffa9dd92d65bf5674cf0ad8e9c0c7c943b2
+```
+
+
+
+저장한 이미지를 사용하여 새로운 컨테이너를 생성하고 80번 포트가 열려있는 것을 확인합니다. 
+
+```cmd
+$ docker run -itd commit:v1
+c551f14323f9bc6dccf23b0a68fb9c4610e73079e7d76fe09306ed35aa8c0f57
+
+$ docker ps
+CONTAINER ID   IMAGE          COMMAND                   CREATED              STATUS              PORTS     NAMES
+c551f14323f9   commit:v1      "/bin/bash"               About a minute ago   Up About a minute   80/tcp    commit
+51c471535b96   ubuntu:22.04   "/bin/bash"               2 hours ago          Up 2 hours                    base
+```
+
+
+
+`inspect`를 사용하면 다음과 같이 `commit:v1` 이미지에 새로운 레이어가 추가되어 있는 것을 확인할 수 있습니다. 
+
+> `jq`가 설치되어 있지 않은 경우, `Appendix`를 참고하여 설치해주세요.
+
+```cmd
+$ docker inspect ubuntu:22.04 | jq ".[0].RootFS.Layers"
+[
+  "sha256:a1360aae5271bbbf575b4057cb4158dbdfbcae76698189b55fb1039bc0207400"
+]
+$ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
+[
+  "sha256:a1360aae5271bbbf575b4057cb4158dbdfbcae76698189b55fb1039bc0207400",
+  "sha256:36005e181ab5ff954b4d4191c6a3f6a69a62cf2d3367c53e6889ee2d14757c44"
+]
+```
+
+
+
+#### [연습] `buildx`를 이용하여 `ARM`용 이미지 제작하기
+
+
 
 
 
@@ -2281,7 +2548,18 @@ c3f279d17e0a        ubuntu:22.04        /bin/bash               7 days ago      
 
 
 
-- commit& Dockerfile을 이용하여 실습용 이미지 제작 및 업로드
+#### [실습] `cloud_wave:base.v1`에 `terraform` 설치하기
+
+- `cloud_wave:base.v1` 이미지를 사용하는 컨테이너를 생성합니다. 
+- 해당 컨테이너에 `terraform`을 설치합니다. 
+- `commit`을 이용하여 컨테이너를 `cloud_wave:practice.v1`으로 저장합니다. 
+- `ECR`에 해당 이미지를 업로드 합니다. 
+
+
+
+#### [실습] ARM 인스턴스에서 Application 실행하기
+
+
 
 
 
@@ -2304,7 +2582,12 @@ c3f279d17e0a        ubuntu:22.04        /bin/bash               7 days ago      
 
 
 
+## jq(JSON Parser) 설치
 
+```cmd
+```
+
+https://craftdeveloper.tistory.com/23
 
 
 
