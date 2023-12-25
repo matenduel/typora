@@ -1,24 +1,8 @@
----
-
-실습환경
-
-AWS (By Terraform)
-
--> EC2 (Docker & Docker Compose)
-
--> EKS (Kubernetes)
-
----
-
-
-
-
-
 # 0. 시작하기 전에
 
 일부 실습은 AWS 환경에서 진행되며 `Terraform`을 통해서 전개할 예정입니다. 
 
-자세한 세팅방법은 `Appendix`를 참조해주세요.
+자세한 세팅 방법은 `Appendix`를 참조해주세요.
 
 
 
@@ -28,7 +12,7 @@ AWS (By Terraform)
 
 > 다운로드 [링크](https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe)
 
-Docker Desktop을 설치합니다. 
+- Docker Desktop을 설치합니다. 
 
 
 
@@ -113,6 +97,9 @@ docker pull <IMAGE_NAME>@<DIGEST>
 
 - 동일한 `Tag`를 가진 이미지가 존재하는 경우, 이미지를 교체하지 않습니다.
 - 동일한 이미지더라도 `Tag`가 다른 경우 이미지가 추가됩니다. 
+- 이미지마다 지원하는 `arch`가 다를 수 있습니다. 
+  - `arch` = arm, amd64, ...
+
 
 
 
@@ -793,6 +780,38 @@ UID        PID  PPID  C STIME TTY          TIME CMD
 root         1     0  0 17:11 pts/0    00:00:00 /bin/bash
 root         9     0  0 17:11 ?        00:00:00 ps -ef
 ```
+
+
+
+### 컨테이너 삭제
+
+> https://docs.docker.com/engine/reference/commandline/rm/
+
+```
+docker rm [OPTIONS] CONTAINER [CONTAINER...]
+```
+
+
+
+**주요 Options**
+
+| Option      | Short | Default | Description                                             |
+| ----------- | ----- | ------- | ------------------------------------------------------- |
+| `--force`   | `-f`  |         | Force the removal of a running container (uses SIGKILL) |
+| `--link`    | `-l`  |         | Remove the specified link                               |
+| `--volumes` | `-v`  |         | Remove anonymous volumes associated with the container  |
+
+
+
+#### Tip
+
+종료된 모든 컨테이너를 삭제하려면 다음과 같이 사용하면 됩니다.  
+
+```cmd
+$ docker rm $(docker ps -a -q -f status=exited)
+```
+
+
 
 
 
@@ -1734,7 +1753,9 @@ CREATE TABLE IF NOT EXISTS cloud_wave (
 );
 ```
 
-**output**
+
+
+다음 명령어를 이용하여 생성한 테이블을 확인합니다. 
 
 ```cmd
 postgres=# \dt
@@ -2302,7 +2323,7 @@ PING web_app (172.19.0.4) 56(84) bytes of data.
 
 
 
-## 1.7. Docker Advanced
+## 1.7. Docker Advance - Image
 
 ### Docker commit
 
@@ -2349,47 +2370,175 @@ Extended build capabilities with BuildKit
 
 https://gurumee92.tistory.com/311
 
-#### build
 
 
-
-
-
-
-
-
-
-### Docker Scout ?
-
-> https://docs.docker.com/engine/reference/commandline/scout/
-
-#### cves
-
-> https://docs.docker.com/engine/reference/commandline/scout_cves/
+#### builder 목록 확인하기
 
 ```shell
-docker scout cves [OPTIONS] [IMAGE|DIRECTORY|ARCHIVE]
+docker buildx ls
 ```
 
 
 
-#### quickview
+**출력 예시**
 
-> https://docs.docker.com/engine/reference/commandline/scout_quickview/
+```cmd
+$ docker buildx ls
+NAME/NODE       DRIVER/ENDPOINT STATUS  BUILDKIT             PLATFORMS
+default *       docker
+  default       default         running v0.11.6+616c3f613b54 linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/arm64, linux/riscv64, linux/ppc64le, linux/s390x, linux/386, linux/mips64le, linux/mips64, linux/arm/v7, linux/arm/v6
+```
+
+
+
+**주의사항**
+
+- 현재 선택된 `builder`는 `*`이 붙어있습니다. 
+
+
+
+#### builder 생성하기
 
 ```shell
-docker scout quickview [IMAGE|DIRECTORY|ARCHIVE]
+docker buildx create [OPTIONS] [CONTEXT|ENDPOINT]
+```
+
+
+
+| Option              | Short | Default | Description                                                  |
+| ------------------- | ----- | ------- | ------------------------------------------------------------ |
+| `--append`          |       |         | Append a node to builder instead of changing it              |
+| `--bootstrap`       |       |         | Boot builder after creation                                  |
+| `--builder`         |       |         |                                                              |
+| `--buildkitd-flags` |       |         | Flags for buildkitd daemon                                   |
+| `--config`          |       |         | BuildKit config file                                         |
+| `--driver`          |       |         | Driver to use (available: `docker-container`, `kubernetes`, `remote`) |
+| `--driver-opt`      |       |         | Options for the driver                                       |
+| `--leave`           |       |         | Remove a node from builder instead of changing it            |
+| `--name`            |       |         | Builder instance name                                        |
+| `--node`            |       |         | Create/modify node with given name                           |
+| `--platform`        |       |         | Fixed platforms for current node                             |
+| `--use`             |       |         | Set the current builder instance                             |
+
+
+
+##### driver 목록
+
+- docker
+
+Uses the builder that is built into the Docker daemon. With this driver, the [`--load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) flag is implied by default on `buildx build`. However, building multi-platform images or exporting cache is not currently supported.
+
+- docker-container
+
+Uses a BuildKit container that will be spawned via Docker. With this driver, both building multi-platform images and exporting cache are supported.
+
+Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
+
+- kubernetes
+
+Uses Kubernetes pods. With this driver, you can spin up pods with defined BuildKit container image to build your images.
+
+Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
+
+- remote
+
+Uses a remote instance of buildkitd over an arbitrary connection. With this driver, you manually create and manage instances of buildkit yourself, and configure buildx to point at it.
+
+Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
+
+
+
+#### builder 정보 조회
+
+```shell
+docker buildx inspect [NAME]
+```
+
+
+
+**출력 예시**
+
+```cmd
+$ docker buildx inspect --bootstrap
+Name:          default
+Driver:        docker
+Last Activity: 2023-12-22 02:37:31 +0000 UTC
+
+Nodes:
+Name:      default
+Endpoint:  default
+Status:    running
+Buildkit:  v0.11.6+616c3f613b54
+Platforms: linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/arm64, linux/riscv64, linux/ppc64le, linux/s390x, linux/386, linux/mips64le, linux/mips64, linux/arm/v7, linux/arm/v6
+Labels:
+ org.mobyproject.buildkit.worker.moby.host-gateway-ip: 192.168.65.254
+GC Policy rule#0:
+ All:           false
+ Filters:       type==source.local,type==exec.cachemount,type==source.git.checkout
+ Keep Duration: 172.8µs
+ Keep Bytes:    2.764GiB
+GC Policy rule#1:
+ All:           false
+ Keep Duration: 5.184ms
+ Keep Bytes:    20GiB
+GC Policy rule#2:
+ All:        false
+ Keep Bytes: 20GiB
+GC Policy rule#3:
+ All:        true
+ Keep Bytes: 20GiB
 ```
 
 
 
 
 
+#### builder 선택하기
+
+```shell
+docker buildx use [OPTIONS] NAME
+```
 
 
-### Docker Trust -> 간략하게
 
-> https://docs.docker.com/engine/reference/commandline/trust/
+| Option      | Short | Default | Description                                |
+| ----------- | ----- | ------- | ------------------------------------------ |
+| `--default` |       |         | Set builder as default for current context |
+| `--global`  |       |         | Builder persists context changes           |
+
+
+
+#### 이미지 빌드하기
+
+> https://docs.docker.com/engine/reference/commandline/buildx_build/
+
+```shell
+docker buildx build [OPTIONS] PATH | URL | -
+```
+
+
+
+- Single
+
+- Multi
+
+```
+--load를 사용하면
+export를 이용하여 image를 추출하고 import함
+```
+
+
+
+
+
+##### [예시] `ARM`용 이미지 제작하기
+
+```cmd
+$ docker buildx build --platform linux/arm/v7 -t cloudwave:arm .
+...
+$ docker image inspect cloudwave:multi-platform -f "arch: {{ .Architecture }}/{{ .Variant }}" 
+arch: arm/v7
+```
 
 
 
@@ -2516,7 +2665,38 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
 
 
 
-#### [연습] `buildx`를 이용하여 `ARM`용 이미지 제작하기
+#### [연습] `buildx`를 이용하여 `ARM`용 `cloudwave:base.v1` 이미지 제작하기
+
+> [연습] 실습용 `ubuntu` 이미지 제작하기
+
+`buildx ls`를 이용하여 현재 사용중인 `builder`가 지원하는 `platforms` 목록을 확인합니다. 
+
+```cmd
+$ NAME/NODE             DRIVER/ENDPOINT                STATUS  BUILDKIT             PLATFORMS
+default *             docker
+  default             default                        running v0.11.6+616c3f613b54 linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/arm64, linux/riscv64, linux/ppc64le, linux/s390x, linux/386, linux/mips64le, linux/mips64, linux/arm/v7, linux/arm/v6
+```
+
+
+
+`buildx build` 명령어를 이용하여 `linux/arm/v7`용 이미지를 제작합니다. 
+
+```cmd
+# builder의 driver가 docker인 경우
+$ docker buildx build --platform linux/arm/v7 -t cloudwave:arm.v1 . 
+
+# builder의 driver가 docker-container인 경우 `--load` 옵션을 추가합니다.
+$ docker buildx build --platform linux/arm/v7 -t cloudwave:arm.v1 --load .
+```
+
+
+
+다음 명령어를 실행하여 생성한 이미지의 `Architecture`를 확인 할 수 있습니다. 
+
+```cmd
+$ docker image inspect cloudwave:arm.v1 -f "arch: {{ .Architecture }}/{{ .Variant }}"
+arch: arm/v7
+```
 
 
 
@@ -2525,6 +2705,46 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
 
 
 ---
+
+
+
+## 1.8. Docker Advance - Security
+
+### Docker Scout ?
+
+> https://docs.docker.com/engine/reference/commandline/scout/
+
+#### cves
+
+> https://docs.docker.com/engine/reference/commandline/scout_cves/
+
+```shell
+docker scout cves [OPTIONS] [IMAGE|DIRECTORY|ARCHIVE]
+```
+
+
+
+#### quickview
+
+> https://docs.docker.com/engine/reference/commandline/scout_quickview/
+
+```shell
+docker scout quickview [IMAGE|DIRECTORY|ARCHIVE]
+```
+
+
+
+
+
+### Docker Trust -> 간략하게
+
+> https://docs.docker.com/engine/reference/commandline/trust/
+
+
+
+### 연습 문제
+
+#### [연습] Commit을 이용하여 패키지가 설치된 이미지 생성하기
 
 
 
@@ -2534,7 +2754,111 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
 
 ## 종합 문제
 
-### [실습]
+### [실습-1] `cloudwave:base.v1`에 `terraform` 설치하기
+
+- `cloudwave:base.v1` 이미지를 사용하여 컨테이너를 생성합니다.
+  - 컨테이너의 이름은 `base`로 설정합니다. 
+
+- `base` 컨테이너에 접속합니다. 
+- 다음 스크립트를 이용하여 `terraform`을 설치합니다. 
+
+```cmd
+$ apt-get update && apt-get install -y gnupg software-properties-common wget
+
+$ wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+$ gpg --no-default-keyring \
+--keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+--fingerprint
+# Output
+/usr/share/keyrings/hashicorp-archive-keyring.gpg
+-------------------------------------------------
+pub   rsa4096 2023-01-10 [SC] [expires: 2028-01-09]
+      798A EC65 4E5C 1542 8C8E  42EE AA16 FCBC A621 E701
+uid           [ unknown] HashiCorp Security (HashiCorp Package Signing) <security+packaging@hashicorp.com>
+sub   rsa4096 2023-01-10 [S] [expires: 2028-01-09]
+
+$ echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+tee /etc/apt/sources.list.d/hashicorp.list
+
+$ apt update
+
+$ apt-get install -y terraform=1.6.6-1
+
+$ terraform --version
+Terraform v1.6.6
+on linux_amd64
+```
+
+- `commit`을 이용하여 `base` 컨테이너를 저장합니다. 
+  - 이미지 이름은 `cloudwave:practice.v1`으로 설정합니다. 
+
+
+
+### [실습-2] 컨테이너를 사용하여 `terraform` 코드 실행하기
+
+> `terraform destroy` 명령어를 통해 전개된 AWS 인프라를 제거할 수 있습니다. 
+
+- `source_code`이름을 가진 `volume`을 생성합니다. 
+
+- `GitSync` 컨테이너에 실행합니다.
+
+  > https://github.com/kubernetes/git-sync/releases/tag/v4.1.0
+
+  - 이미지는 `registry.k8s.io/git-sync/git-sync:v4.1.0`를 사용합니다.
+
+  - `source_code` 볼륨을 `/code`에 마운트합니다.
+
+  - 다음과 같이 환경 변수를 설정합니다. 
+    ```tex
+    GITSYNC_REPO=https://github.com/matenduel/code_kata
+    GITSYNC_ROOT=/code/git
+    GITSYNC_REF=main
+    GITSYNC_DEPTH=1
+    GITSYNC_ONE_TIME=1
+    ```
+
+- `cloud_wave:practice.v1` 컨테이너를 실행합니다. 
+
+  - `source_code` 볼륨을 `/terraform`에 마운트합니다.
+
+  - 다음과 같이 환경 변수를 설정합니다.
+    ``` tex
+    AWS_ACCESS_KEY_ID=<ACCESS_KEY>
+    AWS_SECRET_ACCESS_KEY=<SECRET_KEY>
+    AWS_DEFAULT_REGION=ap-northeast-2
+    ```
+
+- `exec`를 사용하여 `/terraform` 디렉토리에서 다음 명령어를 실행합니다. 
+
+  ```shell
+  # Terraform 사용을 위해 초기화 합니다. 
+  terraform init
+  # Infra 변경사항들을 보여줍니다.
+  terraform plan
+  # Infra 변경사항을 적용합니다. 
+  terraform apply -var="aws_access_key=${AWS_ACCESS_KEY_ID}" -var="aws_secret_key=${AWS_SECRET_ACCESS_KEY}" -auto-approve
+  ```
+
+- 
+
+
+
+### [실습-3] TODO ARM 인스턴스에서 Application 실행하기
+
+- `driver`가 `docker-container`인 `builder`를 생성합니다. 
+- 다음 `Dockerfile`을 이용하여 `multi-platform`용 이미지를 생성하고 `ECR` 업로드합니다.
+  - 해당 이미지는 `linux/amd64`와 `linux/arm/v6`을 지원해야 합니다. 
+  - 이름은 
+- TODO 서버에 접속합니다. 
+- 컨테이너를 실행합니다. 
+  - 이미지는 ``를 사용합니다. 
+  - 
+
+
+
+### [실습-4] TODO
 
 - Web & DB
   - EC2 환경
@@ -2542,36 +2866,10 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
   - Volume을 이용하여 Source code 공유
   - ENV는 command를 통해서 전달
   - Web 접근을 위해 80포트 포워딩
-  
-
-
-
-
-
-#### [실습] `cloud_wave:base.v1`에 `terraform` 설치하기
-
-- `cloud_wave:base.v1` 이미지를 사용하는 컨테이너를 생성합니다. 
-- 해당 컨테이너에 `terraform`을 설치합니다. 
-- `commit`을 이용하여 컨테이너를 `cloud_wave:practice.v1`으로 저장합니다. 
-- `ECR`에 해당 이미지를 업로드 합니다. 
-
-
-
-#### [실습] ARM 인스턴스에서 Application 실행하기
-
-
 
 
 
 ---
-
-
-
-
-
-
-
-
 
 # Appendix
 
@@ -2582,18 +2880,47 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
 
 
 
-## jq(JSON Parser) 설치
+## `Chocolatey` 설치
+
+> Windows용
+
+### CMD
+
+> Admin 권한으로 실행해야 합니다. 
 
 ```cmd
+@"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 ```
 
-https://craftdeveloper.tistory.com/23
+
+
+### PowerShell
+
+> Admin 권한으로 실행해야 합니다. 
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
 
 
 
 
 
+## jq(JSON Parser) 설치
 
+### Windows Chocolatey
+
+```cmd
+$ choco install jq
+```
+
+
+
+### Ubuntu apt
+
+```cmd
+$ apt install jq
+```
 
 
 
