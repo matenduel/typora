@@ -1,0 +1,78 @@
+version: "3.8"
+name: "cloud_wave"
+
+services:
+#  frontend:
+#    image: nginx:latest
+#    ports:
+#      - "80:80"
+##      - "81:81"
+#    networks:
+#      - private
+#    configs:
+#      - server-config
+#    restart: always
+
+  server:
+    image: compose:build.v2
+    stdin_open: true
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    build:
+      dockerfile_inline: |
+        FROM ubuntu:22.04
+        RUN apt-get update && apt-get upgrade
+
+#      dockerfile: "server.dockerfile"
+
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - "sleep 3600"
+    networks:
+      - private
+      - db
+    restart: no
+
+  postgres:
+    container_name: db_postgres
+    image: postgres:16.1-bullseye
+    networks:
+      - db
+    expose:
+      - 5432
+    volumes:
+      - db-data:/var/lib/postgresql/data:rw
+    secrets:
+      - db_password
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_PATH: /run/secrets/db_password
+    restart: always
+
+
+volumes:
+  db-data:
+    name: "db-data"
+    labels:
+      description: "PostgreSQL 16.1 volume"
+
+configs:
+  server-config:
+    file: "server.conf"
+
+# Secret not encrypted when swarm is off
+secrets:
+  db_password:
+    file: "secret.txt"
+
+networks:
+  private:
+    name: "private"
+  db:
+    name: "db"
+

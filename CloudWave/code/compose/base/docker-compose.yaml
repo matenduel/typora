@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  frontend:
+    image: nginx:latest
+    networks:
+      - private
+    configs:
+      - server-config
+    restart: always
+
+  postgres:
+    image: postgres:16.1-bullseye
+    networks:
+      - db
+    expose:
+      - 5432
+    volumes:
+      - db-data:/var/lib/postgresql/data:rw
+    secrets:
+      - db_password
+    env_file:
+      - .env
+    environment:
+      DB_PASSWORD_PATH: /run/secrets/db_password
+    restart: always
+
+
+volumes:
+  db-data:
+    name: "db-data"
+    labels:
+      description: "PostgreSQL 16.1 volume"
+
+configs:
+  server-config:
+    file: "server.conf"
+
+# Secret not encrypted when swarm is off
+secrets:
+  db_password:
+    file: "secret.txt"
+
+networks:
+  private:
+    name: "private"
+  db:
+    name: "db"

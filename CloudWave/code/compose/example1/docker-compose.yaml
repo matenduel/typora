@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  ubuntu:
+    image: cloudwave:example.1
+    build:
+      dockerfile: "server.dockerfile"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - "sleep 3600"
+    restart: no
+
+  nginx:
+    image: nginx:latest
+    # expose 대신 ports를 사용합니다.
+    ports:
+      - "81:80"
+    restart: always
