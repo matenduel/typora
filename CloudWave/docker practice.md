@@ -1073,6 +1073,9 @@ Alpine Linux was designed with security in mind. All userland binaries are compi
 
 #### 주의사항
 
+- `-f`를 통해 사용할 `Dockerfile`을 명시하지 않는 경우, 파일 이름이 `Dockerfile`인 파일이 사용됩니다. 
+- `Dockerfile`내 모든 상대 경로들은 `build`시 입력된 `Path`를 기준으로 계산됩니다. 
+
 
 
 
@@ -2307,7 +2310,7 @@ PING web_app (172.19.0.4) 56(84) bytes of data.
 
 
 
-#### [실습] 연습 문제(`bridge` 네트워크를 이용하여 컨테이너 연결하기)에서 생성한 `DB`를 `alias`를 이용하여 연결하기
+#### TODO [실습] 연습 문제(`bridge` 네트워크를 이용하여 컨테이너 연결하기)에서 생성한 `DB`를 `alias`를 이용하여 연결하기
 
 > 
 
