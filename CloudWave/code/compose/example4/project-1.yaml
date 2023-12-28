@@ -1,0 +1,17 @@
+version: '3.8'
+name: 'network-across-project-1'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+
+networks:
+  private:
+    name: "across_project"
+    external: true

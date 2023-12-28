@@ -402,7 +402,7 @@ docker compose build [OPTIONS] [SERVICE...]
 **출력 예시**
 
 ```yaml
-# docker-compose.yaml
+# project-1.yaml
 version: "3.8"
 
 services:
@@ -1465,7 +1465,143 @@ services:
 
 
 
-##### [연습] `.env`를 이용하여 서비스 설정 변경하기
+##### [연습] 환경변수를 이용하여 `compose file` 제어하기
+
+환경변수를 통해 `docker compose` 파일을 설정하는 방법은 일반적으로 다음과 같습니다. 
+
+1. `Host`에서 환경변수 설정하기 
+2. 환경 변수파일(`.env`)를 사용하기
+    - `CLI`
+
+다음 `.env`와 `docker-compose.yaml`을 이용하여 프로젝트를 빌드 후 실행합니다. 
+
+```tex
+# .env
+FROM=".env file"
+```
+
+```yaml
+# project-1.yaml
+version: '3.8'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from "$FROM"'
+    restart: no
+```
+
+
+
+`docker compose up`을 이용하여 실행하면 다음과 같이 `.env`의 환경변수가 기입된 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose up
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/0
+ ✔ Container example3-ubuntu-1  Recreated                                                                                                                                                                                          0.0s 
+Attaching to example3-ubuntu-1
+example3-ubuntu-1  | env from ".env file"
+example3-ubuntu-1 exited with code 0
+```
+
+
+
+이번에는 `host`에서 다음 명령어를 통해 다음과 같이 환경변수를 설정한 뒤, 실행해보면 다음과 같은 결과를 얻을 수 있습니다. 
+
+```cmd
+$ export FROM="host"
+$ docker compose up
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/0
+ ✔ Container example3-ubuntu-1  Recreated                                                                                                                                                                                          0.0s 
+Attaching to example3-ubuntu-1
+example3-ubuntu-1  | env from host
+example3-ubuntu-1 exited with code 0
+```
+
+
+
+환경변수에 대해 `default` 값을 설정하고 싶은 경우 다음과 같이 작성하면 됩니다. 
+
+- `${ENV:-DEFAULT_VALUE}`
+
+```yaml
+# project-1.yaml
+version: '3.8'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from "$FROM"' && echo 'env from ${BY:-default}'
+    restart: no
+```
+
+위의 `docker-compose.yaml`을 실행하면 다음과 같이 "default" 값이 출력된 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose up
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/0
+ ✔ Container example3-ubuntu-1  Recreated                                                                                                                                                                                          0.0s 
+Attaching to example3-ubuntu-1
+example3-ubuntu-1  | env from host
+example3-ubuntu-1  | env from default
+example3-ubuntu-1 exited with code 0
+```
+
+
+
+##### [연습] `command`에서 컨테이너 환경변수 사용하
+
+`docker-compose.yaml` 파일에서 `$`를 이용하여 환경변수를 사용하는 경우,  컨테이너 내부의 환경변수가 사용되지 않습니다. 
+
+`command`에서 컨테이너 내부의 환경변수를 사용하고 싶은 경우 다음과 같이 `$$`를 이용하면 됩니다. 
+
+```yaml
+version: '3.8'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    environment:
+      - FROM="env definition"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from ${FROM}' && echo env from $${FROM}
+    restart: no
+```
+
+
+
+위의 `yaml` 파일을 실행하면 다음과 같은 결과 값을 확인할 수 있습니다.  
+
+```cmd
+$ docker compose up
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/0
+ ✔ Container example3-ubuntu-1  Recreated                                                                                                                                                                                          0.0s 
+Attaching to example3-ubuntu-1
+example3-ubuntu-1  | env from host
+example3-ubuntu-1  | env from "env definition"
+example3-ubuntu-1 exited with code 0
+```
+
+
+
+`docker inspect` 명령어를 통해서도 확인해볼 수 있습니다. 
+
+```cmd
+$ docker inspect example3-ubuntu-1 -f "{{ .Args }}"
+[-c echo 'env from host' && echo env from ${FROM}]
+```
 
 
 
@@ -1500,13 +1636,34 @@ $ docker compose -f example_1.yaml -p ex1 up -d --build
 
 
 
-[연습] env 설정하기 
+##### TODO [연습] health check
 
--> override 예시
+```yaml
+services:
+  numbers-api:
+    image: diamol/ch08-numbers-api:v3
+    ports:
+      - "8087:80"
+    healthcheck:
+      interval: 5s
+      timeout: 1s
+      retries: 2
+      start_period: 5s
+    networks:
+      - app-net
+```
+
+CASE
+
+- Health check 설정하여 체크
+- timeout 유도하여 체크
+- start_period 유도하여 체크
 
 
 
-### volume
+
+
+### 2.2.4. volume
 
 ```yaml
 services:
@@ -1536,9 +1693,271 @@ volumes:
 
 
 
+#### 볼륨 정의하기
+
+`volume`은 다음 5가지 속성값을 통해 정의합니다. 
+
+1. name
+2. external
+3. labels
+4. driver
+5. driver_opts
 
 
-### network
+
+**주의 사항**
+
+- `volume`을 정의하였더라도 service에서 사용하지 않았다면 생성되지 않습니다. 
+
+
+
+#### 볼륨 사용하기
+
+정의된 볼륨은 서비스의 `volumes`에서 사용할 수 있습니다. 
+
+두 가지 방식으로 사용할 volumes를 작성할 수 있습니다. long / short
+
+
+
+##### Short Syntax
+
+short는 `docker run`에서 사용하던 방식과 동일합니다. 
+
+The short syntax uses a single string with colon-separated values to specify a volume mount (`VOLUME:CONTAINER_PATH`), or an access mode (`VOLUME:CONTAINER_PATH:ACCESS_MODE`).
+
+- `VOLUME`: Can be either a host path on the platform hosting containers (bind mount) or a volume name.
+
+- `CONTAINER_PATH`: The path in the container where the volume is mounted.
+
+- ```
+    ACCESS_MODE
+    ```
+
+    : A comma-separated
+
+     
+
+    ```
+    ,
+    ```
+
+     
+
+    list of options:
+
+    - `rw`: Read and write access. This is the default if none is specified.
+    - `ro`: Read-only access.
+    - `z`: SELinux option indicating that the bind mount host content is shared among multiple containers.
+    - `Z`: SELinux option indicating that the bind mount host content is private and unshared for other containers.
+
+
+
+##### Long Syntax
+
+`long syntax` 방식은 short보다 더 많은 속성을 제어할 수 있습니다. 
+
+- `type`: The mount type. Either `volume`, `bind`, `tmpfs`, `npipe`, or `cluster`
+
+- `source`: The source of the mount, a path on the host for a bind mount, or the name of a volume defined in the [top-level `volumes` key](https://docs.docker.com/compose/compose-file/07-volumes/). Not applicable for a tmpfs mount.
+
+- `target`: The path in the container where the volume is mounted.
+
+- `read_only`: Flag to set the volume as read-only.
+
+- ```
+    bind
+    ```
+
+    : Used to configure additional bind options:
+
+    - `propagation`: The propagation mode used for the bind.
+    - `create_host_path`: Creates a directory at the source path on host if there is nothing present. Compose does nothing if there is something present at the path. This is automatically implied by short syntax for backward compatibility with `docker-compose` legacy.
+    - `selinux`: The SELinux re-labeling option `z` (shared) or `Z` (private)
+
+- ```
+    volume
+    ```
+
+    : Configures additional volume options:
+
+    - `nocopy`: Flag to disable copying of data from a container when a volume is created.
+
+- ```
+    tmpfs
+    ```
+
+    : Configures additional tmpfs options:
+
+    - `size`: The size for the tmpfs mount in bytes (either numeric or as bytes unit).
+    - `mode`: The file mode for the tmpfs mount as Unix permission bits as an octal number.
+
+- `consistency`: The consistency requirements of the mount. Available values are platform specific.
+
+ 
+
+
+
+#### 연습 문제
+
+##### [연습] External volume 사용하기
+
+```cmd
+$ docker volume create vault
+vault
+```
+
+
+
+```yaml
+version: '3.8'
+name: 'volume-external'
+
+services:
+  master:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    volumes:
+      - vault:/root/vault
+
+volumes:
+  vault:
+    external: true
+    name: 'vault'
+```
+
+TODO nocopy 추가
+
+
+
+
+
+##### [연습] read_only 로 설정하여 사용하기
+
+```yaml
+version: '3.8'
+name: 'volume-external'
+
+services:
+  master:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    volumes:
+      - vault:/root/vault:rw
+
+  slave:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    volumes:
+      - vault:/root/vault:ro
+
+volumes:
+  vault:
+    external: true
+    name: 'vault'
+```
+
+
+
+```cmd
+$ docker compose -f example2/docker-compose.yaml up -d
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 2/2
+ ✔ Container volume-external-master-1  Started                                                                                                                                                                                     0.0s 
+ ✔ Container volume-external-slave-1   Started                                                                                                                                                                                     0.0s 
+
+```
+
+
+
+
+
+```cmd
+$ docker exec volume-external-master-1 /bin/bash -c "echo master > /root/vault/temp.txt"
+
+$ docker exec volume-external-master-1 /bin/bash -c "cat /root/vault/temp.txt"        
+master
+```
+
+
+
+```cmd
+$ docker exec volume-external-slave-1 /bin/bash -c "cat /root/vault/temp.txt"         
+master
+$ docker exec volume-external-slave-1 /bin/bash -c "echo slave > /root/vault/temp.txt"
+/bin/bash: line 1: /root/vault/temp.txt: Read-only file system
+```
+
+
+
+
+
+
+
+
+
+##### [연습] volumes_from
+
+> https://docs.docker.com/compose/compose-file/05-services/#volumes
+
+
+
+```yaml
+version: '3.8'
+name: 'volume-external2'
+
+services:
+  other:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    volumes_from:
+      - container:volume-external-slave-1:ro
+
+```
+
+
+
+```cmd
+ ~/repo/typora/CloudWave/code/compose  main +13 !12 ?3                                                                                                                                                                                 
+> docker compose -f example2/docker-compose2.yaml up -d                       
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 2/2
+ ✔ Network volume-external2_default    Created                                                                                                                                                                                     0.1s 
+ ✔ Container volume-external2-other-1  Started                                                                                                                                                                                     0.0s 
+
+ ~/repo/typora/CloudWave/code/compose  main +13 !12 ?3                                                                                                                                                                                 
+> docker exec volume-external2-other-1 /bin/bash -c "cat /root/vault/temp.txt"
+master
+
+```
+
+
+
+
+
+#### [실습] `git-sync`를 이용하여 `FastAPI` 서버 실행하기
+
+조건 
+
+- `git-sync`는 rw
+- `FastAPI`는 ro
+- 디렉토리 지정
+- 
+
+
+
+### 2.2.5. network
 
 ```yaml
 services:
@@ -1555,21 +1974,368 @@ networks:
 
 
 
+Attributes
+
+- external
+- internal
+- labels
+- name
+- driver
 
 
-### config
+
+
+
+#### 네트워크 정의하기
+
+
+
+
+
+#### 네트워크 사용하기
+
+
+
+
+
+#### 연습 문제 
+
+##### TODO [연습] `host`네트워크 사용하기 
+
+```cmd
+$ docker network ls -f driver=host
+NETWORK ID     NAME      DRIVER    SCOPE
+b107e82764b5   host      host      local
+```
+
+
 
 ```yaml
-configs:
-  http_config:
-    file: ./httpd.conf
+version: '3.8'
+name: 'network-host'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      host:
+
+networks:
+  host:
+    name: "host"
+    external: true
+```
+
+
+
+```cmd
+$  docker compose up -d
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/0
+ ✔ Container network-host-ubuntu-1  Created                                                                                                                                                                                        0.0s 
+Error response from daemon: network-scoped alias is supported only for containers in user defined networks
+```
+
+-> 에러 있는 듯
+
+```yaml
 ```
 
 
 
 
 
-### secret
+
+
+
+
+##### [연습] 이미 생성된 네트워크 사용하기
+
+```cmd
+$ docker network create private -d bridge
+1be27c483205a3b2dfbdf4ae36c2cc20ae0a53bc939eb7bd050a65574a9b9299
+
+$ docker network ls -f name=private      
+NETWORK ID     NAME                    DRIVER    SCOPE
+1be27c483205   private                 bridge    local
+```
+
+
+
+
+
+```yaml
+version: '3.8'
+name: 'network-external'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private:
+
+networks:
+  private:
+    external: true
+```
+
+
+
+```cmd
+$ docker compose up -d                                                                             
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/1
+ ✔ Container network-external-ubuntu-1  Started   
+```
+
+
+
+```yaml
+version: '3.8'
+name: 'network-external'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private:
+
+networks:
+  private:
+    name: "my-private"
+    external: true
+```
+
+
+
+```cmd
+$ docker compose up -d
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+network my-private declared as external, but could not be found
+```
+
+
+
+
+
+
+
+##### [연습] alias 설정하기
+
+```yaml
+version: '3.8'
+name: 'network-alias'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private:
+
+networks:
+  private:
+```
+
+
+
+```cmd
+$ docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | jq -r '.[].Aliases' 
+[
+  "network-alias-ubuntu-1",
+  "ubuntu",
+  "d1295a0aae14"
+]
+```
+
+
+
+
+
+```yaml
+version: '3.8'
+name: 'network-alias'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private:
+        aliases:
+          - server
+
+networks:
+  private:
+```
+
+
+
+```cmd
+$  docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | jq -r '.[].Aliases' 
+[
+  "network-alias-ubuntu-1",
+  "ubuntu",
+  "server",
+  "1679779c1978"
+]
+```
+
+
+
+
+
+
+
+#### [실습] 생성된 `network`를 이용하여 서로 다른 프로젝트의 서비스 연결하기
+
+조건
+
+- `across_project` 네트워크를 생성하세요.
+- `network-across-project-1` 프로젝트를 생성하세요
+    - `ubuntu:22.04`
+    - `curl`이 설치되어 있어야합니다. 
+    - `across_project` 네트워크의 alias를 `main`으로 설정하세요
+- `network-across-project-2` 프로젝트를 생성하세요
+    - `nginx:latest`
+    - `80` 포트를 `expose`
+    - `across_project`네트워크의 alias를 `web`으로 설정하세요
+- `docker network inspect`를 이용하여 각 서비스의 IP를 확인하세요
+- `ubuntu`서버에서 curl을 이용하여 `web`을 호출하세요
+    - IP
+    - DNS(alias)
+
+
+
+```cmd
+$ docker network create across_project
+24ca828a4c797fb8a6f13d125af6493e0ba5871c5ac1b94a6bdaf687aa1620cc
+
+```
+
+
+
+
+
+```yaml
+version: '3.8'
+name: 'network-across-project-1'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+
+networks:
+  private:
+    name: "across_project"
+    external: true
+---
+version: '3.8'
+name: 'network-across-project-2'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+
+networks:
+  private:
+    name: "across_project"
+    external: true
+```
+
+
+
+```cmd
+$ docker compose -f project-1.yaml up -d
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/1
+ ✔ Container network-across-project-1-ubuntu-1  Started      
+ 
+$ docker compose -f project-2.yaml up -d
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/1
+ ✔ Container network-across-project-2-ubuntu-1  Started            
+```
+
+
+
+```cmd
+$  docker network inspect across_project | jq '.[].Containers'
+{
+  "29e55aa6d000ec061e25b5f1d1dccd176e44a49b76cacc57cd8d0b2c8c8e5c76": {
+    "Name": "network-across-project-2-ubuntu-1",
+    "EndpointID": "a816b9271bc9e9c379d139e88dfb50acc9dd5af18e0fbcee500006321eaa9324",
+    "MacAddress": "02:42:ac:1b:00:03",
+    "IPv4Address": "172.27.0.3/16",
+    "IPv6Address": ""
+  },
+  "2e4086cf6fa0378e330992491d2cf50a08108fdd730034b4a5ee82b697ae7bdb": {
+    "Name": "network-across-project-1-ubuntu-1",
+    "EndpointID": "2ce7ba6805c0839b91c16f4b2a363935b830aba544546b71f91d7bce7c8709dc",
+    "MacAddress": "02:42:ac:1b:00:02",
+    "IPv4Address": "172.27.0.2/16",
+    "IPv6Address": ""
+  }
+}
+```
+
+
+
+
+
+
+
+### config & secret
+
+```yaml
+services:
+  redis:
+    image: redis:latest
+    configs:
+      - http_config
+      - source: my_config
+        target: /redis_config
+        uid: "103"
+        gid: "103"
+        mode: 0440  # Octal notation
+configs:
+  my_config:
+    external: true
+  http_config:
+    file: ./httpd.conf
+```
+
+
 
 ```yaml
 services:
@@ -1600,56 +2366,72 @@ Services can only access secrets when explicitly granted by a [`secrets`](https:
 
 
 
-### 연습 문제
+#### Config Vs. Secret
 
-#### [연습] 읽기 전용 `volume` 마운트하기
+-> swarm을 쓰지 않는 상황에서 차이는 없음
 
 
 
-#### [연습] 생성된 `network`를 이용하여 서로 다른 프로젝트의 서비스 연결하기
+#### Config Vs. Mount
 
-```yaml
+-> 차이 거의 없음
+
+-> 세부 권한을 다르게 가능?
+
+
+
+#### mode
+
+이런 문제가 생기는 경우를 방지하기 위해, 리눅스에서는 각 파일 및 디렉토리에 대해 **"읽기(r)", "쓰기(w)", "실행(x)"** 권한(permission)을 파일 개별적으로 지정할 수 있도록 만들어 놓았습니다. 그리고 이 세 가지 권한을 **"파일을 소유한 사용자(user)", "특정 그룹(group)에 소속된 사용자", "그 외 사용자(others)"**에 대해 각각 지정할 수 있게 만들었습니다.
+
+
+
+#### 연습 문제
+
+##### [연습] config를 특정 디렉토리에 mount하기
+
+
+
+다음 명령어를 사용하여 파일 생성
+
+```cmd
+$ openssl rand -base64 14 > password.txt 
 ```
 
 
 
+```yaml
+version: '3.8'
+name: 'config-mount'
 
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    configs:
+      - source: password
+        target: /root/web_password.txt
 
-#### [연습]
-
-#### [연습] 
-
-
-
-#### [실습] `git-sync`를 이용하여 `FastAPI` 서버 실행하기
-
-
-
-
-
-
-
-[연습] depend_on을 이용하여 db 생성 후 application 실행하기
-
-
-
-[연습] health_check 사용하기
-
-
-
-[연습] .env 파일 및 secret 관리
+configs:
+  password:
+    file: password.txt
+```
 
 
 
-[연습] build를 사용하여 `base`이미지에 패키지 추가로 설치하기
-
-
-
-[연습] `network`를 이용하여 서로다른 프로젝트를 연결하기
-
-
-
-[연습] `profile` 예제 -> like airflow
+```cmd
+$ docker exec config-mount-ubuntu-1 /bin/bash -c "cat /root/web_password.txt && ls -al /root/"  
+6M9tLBo4u8EEIbb6Pis=
+total 20
+drwx------ 1 root root 4096 Dec 28 07:58 .
+drwxr-xr-x 1 root root 4096 Dec 28 07:58 ..
+-rw-r--r-- 1 root root 3106 Oct 15  2021 .bashrc
+-rw-r--r-- 1 root root  161 Jul  9  2019 .profile
+-rw-r--r-- 1 root root   21 Dec 28 07:51 web_password.txt
+```
 
 
 
@@ -1664,18 +2446,143 @@ Services can only access secrets when explicitly granted by a [`secrets`](https:
 #### anchor & Alias
 
 > https://medium.com/@kinghuang/docker-compose-anchors-aliases-extensions-a1e4105d70bd
+>
+> https://docs.docker.com/compose/compose-file/11-extension/
+
+```yaml
+version: '3.8'
+
+x-common:
+  &common
+  restart: always
+  volumes:
+    - source:/code
+  environment:
+    &default-env
+    BY: "x-common"
+
+services:
+  ubuntu:
+    <<: *common
+    image: ubuntu:22.04
+    environment:
+      <<: *default-env
+      FROM: "env definition"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from ${FROM}' && echo env from $${FROM}
+    restart: no
+
+volumes:
+  source:
+```
+
+##### `x-` prefix
+
+
+
+##### `<<:` 의미 
+
+
 
 #### profile
+
+> https://docs.docker.com/compose/profiles/
+>
+> https://docs.docker.com/compose/compose-file/15-profiles/
+
+```yaml
+services:
+  frontend:
+    image: frontend
+    profiles: ["frontend"]
+
+  phpmyadmin:
+    image: phpmyadmin
+    depends_on:
+      - db
+    profiles:
+      - debug
+
+  backend:
+    image: backend
+
+  db:
+    image: mysql
+```
+
+
+
+
 
 #### deploy
 
 > https://docs.docker.com/compose/compose-file/deploy/
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '0.50'
+      memory: 50M
+      pids: 1
+    reservations:
+      cpus: '0.25'
+      memory: 20M
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+  update_config:
+    parallelism: 2
+    delay: 10s
+    order: stop-first
+```
+
+
+
+
 
 
 
 #### depend_on
 
 > https://docs.docker.com/compose/startup-order/
+>
+> https://docs.docker.com/compose/compose-file/05-services/#depends_on
+
+```yaml
+# Short
+services:
+  web:
+    build: .
+    depends_on:
+      - db
+      - redis
+  redis:
+    image: redis
+  db:
+    image: postgres
+
+# Long
+services:
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_started
+  redis:
+    image: redis
+  db:
+    image: postgres
+```
+
+
 
 
 
@@ -1683,25 +2590,128 @@ Services can only access secrets when explicitly granted by a [`secrets`](https:
 
 ### 연습문제
 
+#### [연습] Anchor & Alias 이용하여 `yaml`파일 작성하기
+
+```yaml
+version: '3.8'
+
+x-common:
+  &common
+  restart: always
+  volumes:
+    - source:/code
+  environment:
+    &default-env
+    BY: "x-common"
+
+services:
+  ubuntu:
+    <<: *common
+    image: ubuntu:22.04
+    environment:
+      <<: *default-env
+      FROM: "env definition"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from ${FROM}' && echo env from $${FROM}
+    restart: no
+
+volumes:
+  source:
+
+```
+
+
+
+
+
+#### [연습] depend_on을 이용하여 db 생성 후 application 실행하기
+
+
+
+#### [연습] `profile` 예제 -> like airflow
+
+```yaml
+# PostgreSQL & PgAdmin
+```
+
+
+
+
+
+#### [연습] deploy 이용하여 동일한 서비스 여러개 띄우기
+
+```yaml
+```
+
+
+
+
+
+#### [연습] deploy 이용하여 update 설정 제어하기
+
+```yaml
+```
+
+
+
 
 
 
 
 ## 종합 문제
 
-[실습-1] `cloudwave:base.v1`에 `terraform` 설치하기
+### [실습-1] 컨테이너를 사용하여 `terraform` 코드 실행하기
+
+- `source_code`이름을 가진 `volume`을 생성합니다. 
+
+- `GitSync` 컨테이너에 실행합니다.
+
+    > https://github.com/kubernetes/git-sync/releases/tag/v4.1.0
+
+    - 이미지는 `registry.k8s.io/git-sync/git-sync:v4.1.0`를 사용합니다.
+
+    - `source_code` 볼륨을 `/code`에 마운트합니다.
+
+    - 다음과 같이 환경 변수를 설정합니다. 
+
+        ```tex
+        GITSYNC_REPO=https://github.com/matenduel/code_kata
+        GITSYNC_ROOT=/code/git
+        GITSYNC_REF=main
+        GITSYNC_DEPTH=1
+        GITSYNC_ONE_TIME=1
+        ```
+
+- `cloud_wave:practice.v1` 컨테이너를 실행합니다. 
+
+    - `source_code` 볼륨을 `/terraform`에 마운트합니다.
+
+    - 다음과 같이 환경 변수를 설정합니다.
+
+        ``` tex
+        AWS_ACCESS_KEY_ID=<ACCESS_KEY>
+        AWS_SECRET_ACCESS_KEY=<SECRET_KEY>
+        AWS_DEFAULT_REGION=ap-northeast-2
+        ```
+
+- `exec`를 사용하여 `/terraform` 디렉토리에서 다음 명령어를 실행합니다. 
+
+    ```shell
+    # Terraform 사용을 위해 초기화 합니다. 
+    terraform init
+    # Infra 변경사항들을 보여줍니다.
+    terraform plan
+    # Infra 변경사항을 적용합니다. 
+    terraform apply -var="aws_access_key=${AWS_ACCESS_KEY_ID}" -var="aws_secret_key=${AWS_SECRET_ACCESS_KEY}" -auto-approve
+    ```
+
+- 
 
 
 
-
-
- [실습-2] 컨테이너를 사용하여 `terraform` 코드 실행하기
-
-
-
-
-
-[실습 -3] Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
+### [실습 -3] Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
 
 
 

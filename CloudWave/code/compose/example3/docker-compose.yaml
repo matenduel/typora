@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    env_file:
+      - ubuntu.env
+    environment:
+      - FROM="env definition"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - echo 'env from ${FROM}' && echo env from $${FROM}
+    restart: no
+
+volumes:
+  db-data:
+    name: "my-app-data"
+    labels:
+      com.example.description: "Database volume"
