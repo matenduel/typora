@@ -1,6 +1,8 @@
+[TOC]
+
 # 0. 시작하기 전에
 
-일부 실습은 AWS 환경에서 진행되며 `Terraform`을 통해서 전개할 예정입니다. 
+일부 실습은 AWS 환경에서 진행되며 `Terraform`을 이용하여 생성할 예정입니다. 
 
 자세한 세팅 방법은 `Appendix`를 참조해주세요.
 
@@ -64,32 +66,48 @@ CLI 대신 Web에서도 사용할 이미지를 검색할 수 있습니다.
 > https://docs.docker.com/engine/reference/commandline/pull/
 
 ```shell
-# Default - Download the `latest` tag
-docker pull <IMAGE_NAME>
+docker pull [OPTIONS] REPOSITORY[:TAG|@DIGEST]
+
+# Default
+docker pull <REPOSITORY>:latest
 
 # By Tag
-docker pull <IMAGE_NAME>:<TAG>
+docker pull <REPOSITORY>:<TAG>
 
 # By digest
-docker pull <IMAGE_NAME>@<DIGEST>
+docker pull <REPOSITORY>@<DIGEST>
 ```
 
 
 
-**Option 목록**
+**주요 옵션**
 
-| Option                    | Short | Default | Description                                      |
-| ------------------------- | ----- | ------- | ------------------------------------------------ |
-| `--all-tags`              | `-a`  |         | Download all tagged images in the repository     |
-| `--disable-content-trust` |       | `true`  | Skip image verification                          |
-| `--platform`              |       |         | Set platform if server is multi-platform capable |
-| `--quiet`                 | `-q`  |         | Suppress verbose output                          |
+| Option       | Short | Default | Description                          |
+| ------------ | ----- | ------- | ------------------------------------ |
+| `--all-tags` | `-a`  |         | 태그된 모든 이미지를 다운로드합니다. |
+| `--platform` |       |         | 이미지의 `platform`을 설정합니다.    |
 
 
 
-`Tag` 또는 `Digest`를 사용하지 않는 경우 기본적으로 `latest` 이미지를 다운로드 받습니다. 
+`Tag` 또는 `Digest`를 사용하지 않는 경우, `latest` 이미지를 다운로드 받습니다. 
 
-![cmd_docker_pull_default](docker practice.assets/cmd_docker_pull_default.PNG)
+```cmd
+$ docker pull ubuntu
+
+Using default tag: latest
+latest: Pulling from library/ubuntu
+Digest: sha256:6042500cf4b44023ea1894effe7890666b0c5c7871ed83a97c36c76ae560bb9b
+Status: Downloaded newer image for ubuntu:latest
+docker.io/library/ubuntu:latest
+```
+
+
+
+#### Tag & Digest
+
+- `Tag`는 사용자가 특정 이미지에 부여한 값이므로, 같은 `Tag`라도 다운로드 시점에 따라 다른 이미지를 나타낼 수 있습니다. 
+  - ex) `latest` 태그
+- `Digest`는 변경이 불가능한 고유의 값이며, 동일한 방식으로 생성된 이미지라면 동일한 `Digest`가 생성됩니다. 
 
 
 
@@ -117,9 +135,26 @@ docker image ls
 
 
 
+**주요 옵션**
+
+| Option       | Short | Default | Description                                     |
+| ------------ | ----- | ------- | ----------------------------------------------- |
+| `--all`      | `-a`  |         | 중간 이미지(`intermediate image`)도 표시합니다. |
+| `--digests`  |       |         | `Digest`를 표기합니다.                          |
+| `--filter`   | `-f`  |         | 필터 조건에 맞는 이미지만 표시합니다.           |
+| `--no-trunc` |       |         | `sha256` 형식의 전체 이미지 ID를 표기합니다.    |
+| `--quiet`    | `-q`  |         | 이미지 ID만 표기합니다.                         |
+
+
+
 `Repository`를 명시한 경우, 해당 이름을 가진 이미지만 검색합니다. 
 
-![cmd_docker_list_result](docker practice.assets/cmd_docker_list_result.PNG)
+```cmd
+$ docker images ubuntu
+REPOSITORY   TAG       IMAGE ID       CREATED       SIZE
+ubuntu       22.04     174c8c134b2a   2 weeks ago   77.9MB
+ubuntu       latest    174c8c134b2a   2 weeks ago   77.9MB
+```
 
 
 
@@ -127,56 +162,79 @@ docker image ls
 
 > https://docs.docker.com/engine/reference/commandline/rmi/
 
-`docker rmi`는 한 개 이상의 명시된 이미지들을 삭제하는 명령입니다. 
-
 ```shell
 docker rmi [OPTIONS] IMAGE [IMAGE...]
 
 # Alias
 docker image rm
-
 ```
 
-**주요 Options**
-
-| Option       | Short | Default | Description                               |
-| ------------ | ----- | ------- | ----------------------------------------- |
-| `--force`    | `-f`  |         | 컨테이너가 존재할 경우 강제로 삭제합니다. |
-| `--no-prune` |       |         | Do not delete untagged parents            |
+`docker rmi`는 한 개 이상의 명시된 이미지들을 삭제하는 명령입니다. 
 
 
+
+**주요 옵션**
+
+| Option    | Short | Default | Description                                  |
+| --------- | ----- | ------- | -------------------------------------------- |
+| `--force` | `-f`  |         | 컨테이너가 존재하더라도 이미지를 삭제합니다. |
+
+
+
+**주의사항**
+
+- 동일한 `Image ID`를 가진 이미지가 2개 이상인 경우 `Image ID`를 이용하여 삭제할 수 없습니다. 
+  -  `-f` 옵션을 사용한 경우 모든 이미지를 삭제합니다. 
+
+
+
+### 모든 이미지 삭제하기
 
 > https://docs.docker.com/engine/reference/commandline/image_prune/
 
-`volume prune`은 사용하지 않는 모든 볼륨을 삭제하는 명령어 입니다.
-
 ```sh
-# Remove the dangling or unused images
-docker image prune
-docker image prune --all
+docker image prune [OPTIONS]
 ```
 
-**주요 Options**
-
-| Option     | Short | Default | Description                                      |
-| ---------- | ----- | ------- | ------------------------------------------------ |
-| `--all`    | `-a`  |         | Remove all unused images, not just dangling ones |
-| `--filter` |       |         | Provide filter values (e.g. `until=<timestamp>`) |
-| `--force`  | `-f`  |         | Do not prompt for confirmation                   |
+`docker image prune`은 모든 `dangling` 이미지를 삭제하는 명령어 입니다.
 
 
+
+#### `dangling` 이미지
+
+- `Repository`가 `none`으로 표기되는 이미지입니다. 
+- 일반적으로 다음과 같은 상황에서 발생합니다. 
+  - 동일한 이름(`Name`&`Tag`)을 가진 다른 이미지를 생성한 경우
+  - `Multi-Stage` 빌드중 생성된 중간 이미지 
+
+```cmd
+$ docker images -f dangling=true
+REPOSITORY   TAG       IMAGE ID       CREATED              SIZE
+<none>       <none>    5b95739d14ad   About a minute ago   1.02GB
+```
+
+
+
+**주요 옵션**
+
+| Option     | Short | Default | Description                                                  |
+| ---------- | ----- | ------- | ------------------------------------------------------------ |
+| `--all`    | `-a`  |         | `dangling` 이미지를 포함한 사용하지 않는 모든 이미지를 삭제합니다. |
+| `--filter` |       |         | Provide filter values (e.g. `until=<timestamp>`)             |
 
 
 
 ### 이미지 정보 조회
 
+> https://docs.docker.com/engine/reference/commandline/inspect/
+
 ```shell
-docker inspect [OPTIONS] <IMAGE_NAME_OR_ID> [<IMAGE_NAME_OR_ID>...]
+docker inspect [OPTIONS] NAME|ID [NAME|ID...]
 ```
 
 
 
-다음은 `ubuntu:22.04`의 이미지 정보입니다. 
+#### [예시]  `ubuntu:22.04`이미지 정보 조회하기
 
 ```cmd
 $ docker inspect ubuntu:22.04
@@ -282,30 +340,36 @@ $ docker inspect ubuntu:22.04
 
 ### 연습 문제
 
-#### ARM용 Ubuntu 다운로드하기
+#### [연습] ARM용 Ubuntu 다운로드하기
 
-> 조건
->
-> - Tag: `22.04`
-> - platform: `linux/arm`
-
-
+다음 명령어를 이용하여 `ubuntu:22.04`의 `linux/arm`용 이미지를 다운로드할 수 있습니다. 
 
 ```cmd
 $ docker pull ubuntu:22.04 --platform linux/arm
+22.04: Pulling from library/ubuntu
+Digest: sha256:6042500cf4b44023ea1894effe7890666b0c5c7871ed83a97c36c76ae560bb9b
+Status: Downloaded newer image for ubuntu:22.04
+docker.io/library/ubuntu:22.04
 ```
 
 
 
+다운로드한 이미지의 `arch`를 `inpect`를 이용하여 확인합니다. 
+
+```cmd
+$ docker inspect ubuntu:22.04 -f "{{ .Architecture }}"
+arm
+```
 
 
-#### PostgreSQL 이미지의 Layer 갯수 확인하기
+
+#### [연습] PostgreSQL 이미지의 레이어 갯수 확인하기
 
 > 조건
 >
 > - digest: `sha256:a2282ad0db623c27f03bab803975c9e3942a24e974f07142d5d69b6b8eaaf9e2`
 
-이미지 다운로드하기
+제시된 `Digets`를 이용하여 다음과 같이 이미지를 다운로드합니다. 
 
 ```cmd
 $ docker pull postgres@sha256:a2282ad0db623c27f03bab803975c9e3942a24e974f07142d5d69b6b8eaaf9e2
@@ -313,26 +377,37 @@ $ docker pull postgres@sha256:a2282ad0db623c27f03bab803975c9e3942a24e974f07142d5
 
 
 
-
+다운로드한 이미지를 확인합니다. 
 
 ```cmd
 $ docker images postgres
 REPOSITORY   TAG             IMAGE ID       CREATED        SIZE
 postgres     <none>          391a00ec7cac   13 days ago    425MB
+
+# Digest도 함께 표시
+$ docker images --digests postgres
 ```
 
 
 
-
+다음과 같이 `Docker Id`를 이용하여 해당 이미지를 구성하고 있는 레이어들을 확인할 수 있습니다. 
 
 ```cmd
-$ docker inspect 391a00ec7cac
-...
-# filter
 $ docker inspect 391a00ec7cac -f "{{range $v := .RootFS.Layers}}{{println $v}}{{end}}"
+sha256:92770f546e065c4942829b1f0d7d1f02c2eb1e6acf0d1bc08ef0bf6be4972839
+sha256:94ef9904d4df70d048f10800d60a22f6df9f45fe3c4d2a12e485761b7d695892
+sha256:65c0efddc8b86104633e023acee9707dfa41249636f3690d315c01c987da56fe
+sha256:7e28e769eedfd948a6c6d1dd70ee5a4b0d14b4576f38bb23e64ee30d9afd4d48
+sha256:7fad9b4e65a17abc549695d9529b286d97c2453cb2e43e288dcc9a31f87b01b0
+sha256:b693edccc3930a496794bd45d6e0fb1d0e7a2d00c3ec72130fe944696479e379
+sha256:4f0b1281c6dcf2ceca4094d9730ea0a6184894ca020f94ff43ede84742b4da03
+sha256:059a984b41a09df6a5309e7928fdb61772b9db821cae4dad464b4091b126d78b
+sha256:b885153181c241ae470af66c8ee62619bb667a0579f9a93fcbecaf1482bbafc3
+sha256:931d2dae8d071197900c6b9fd55756e9db68d383fd863f9c1dc40e4e9545f46e
+sha256:983e1162f18556cbac001e4a4ae18766a64d157ad14bfef23bdab9a836be4b63
+sha256:e59308f2f1f587291d3de81d2df9893e8ee395981e5f753dc370f3b8eda44b24
+sha256:39db9e416d9745d9160895485c1d22543edbcffb365bc7ececd44ceab38a9c67
 ```
-
-
 
 
 
@@ -352,44 +427,38 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Option          | Short | Default | Description                                        |
-| --------------- | ----- | ------- | -------------------------------------------------- |
-| `--name`        |       |         | Assign a name to the container                     |
-| `--add-host`    |       |         | Add a custom host-to-IP mapping (host:ip)          |
-| `--detach`      | `-d`  |         | Run container in background and print container ID |
-| `--env`         | `-e`  |         | Set environment variables                          |
-| `--env-file`    |       |         | Read in a file of environment variables            |
-| `--expose`      |       |         | Expose a port or a range of ports                  |
-| `--publish`     | `-p`  |         | Publish a container's port(s) to the host          |
-| `--rm`          |       |         | Automatically remove the container when it exits   |
-| `--interactive` | `-i`  |         | Keep STDIN open even if not attached               |
-| `-tty`          | `-t`  |         | Allocate a pseudo-TTY                              |
-| `--volume`      | `-v`  |         | Bind mount a volume                                |
-
-
-
-**주의사항** #TODO
-
-- `platform` 의미
-- `command` 의미
+| Option          | Short | Default | Description                              |
+| --------------- | ----- | ------- | ---------------------------------------- |
+| `--name`        |       |         | 컨테이너의 이름을 지정합니다.            |
+| `--detach`      | `-d`  |         | 컨테이너를 백그라운드에서 실행합니다.    |
+| `--env`         | `-e`  |         | 환경 변수를 설정합니다.                  |
+| `--env-file`    |       |         | 환경 변수를 저장한 파일을 설정합니다.    |
+| `--expose`      |       |         | 포트 또는 포트 범위를 노출합니다.        |
+| `--publish`     | `-p`  |         | 컨테이너의 포트를 공개합니다.            |
+| `--rm`          |       |         | 컨테이너가 종료되면 자동으로 삭제합니다. |
+| `--interactive` | `-i`  |         | `STDIN`을 활성화합니다.                  |
+| `-tty`          | `-t`  |         | `pseudo-TTY`를 할당합니다.               |
+| `--volume`      | `-v`  |         | 볼륨을 설정합니다.                       |
 
 
 
-#### [Publish or expose port (-p, --expose)](https://docs.docker.com/engine/reference/commandline/run/#publish)
+#### Expose와 Publish 차이점
 
-```console
-$ docker run -p 127.0.0.1:80:8080/tcp ubuntu bash
-```
-
-This binds port `8080` of the container to TCP port `80` on `127.0.0.1` of the host machine. You can also specify `udp` and `sctp` ports. The [Docker User Guide](https://docs.docker.com/network/links/) explains in detail how to use ports in Docker.
-
-Note that ports which are not bound to the host (i.e., `-p 80:80` instead of `-p 127.0.0.1:80:80`) are externally accessible. This also applies if you configured UFW to block this specific port, as Docker manages its own iptables rules. [Read more](https://docs.docker.com/network/iptables/)
+- 둘 다 컨테이너 외부 접근을 허용하기 위해 사용됩니다. 
+- `Expose`는 동일한 `Network`를 사용하는 컨테이너에서만 접근이 가능합니다. 
+- `Publish`는 `host`의 포트와 바인드하여, `host` 또는 외부에서도 접근이 가능합니다. 
 
 
 
-#### [예제] `Ubuntu`에서 명령어 실행하기
+**주의사항**
+
+- `COMMAND`는 `Entrypoint`의 추가 인자로 활용됩니다. 
+
+
+
+#### [예시] `Ubuntu`에서 명령어 실행하기
 
 ```cmd
 $ docker run ubuntu:22.04 /bin/bash -c "whoami && date"
@@ -399,7 +468,7 @@ Sun Dec 17 07:06:20 UTC 2023
 
 
 
-#### [예제] `nginx` 실행하기
+#### [예시] 80 포트를 이용하여 `nginx` 서비스하기
 
 ```cmd
 $ docker run -d -p 80:80 nginx:latest
@@ -446,19 +515,19 @@ docker ps [OPTIONS]
 docker ps -a
 ```
 
-**주요 Options**
-
-| Option     | Short | Default | Description                                      |
-| ---------- | ----- | ------- | ------------------------------------------------ |
-| `--all`    | `-a`  |         | Show all containers (default shows just running) |
-| `--filter` | `-f`  |         | Filter output based on conditions provided       |
-| `--size`   | `-s`  |         | Display total file sizes                         |
 
 
+**주요 옵션**
+
+| Option     | Short | Default | Description                                 |
+| ---------- | ----- | ------- | ------------------------------------------- |
+| `--all`    | `-a`  |         | 상태와 관계없이 모든 컨테이너를 표시합니다. |
+| `--filter` | `-f`  |         | 지정된 조건에 맞는 컨테이너만 표시합니다.   |
+| `--size`   | `-s`  |         | 전체 파일 사이즈도 표기합니다.              |
 
 
 
-#### [예제] 종료된 컨테이너도 포함하여 목록 보기
+#### [예시] 종료된 컨테이너도 포함하여 목록 보기
 
 ```cmd
 $ docker ps -a 
@@ -468,7 +537,7 @@ CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS  
 
 
 
-#### [예제] 이름에 `server`가 들어간 컨테이너만 보기
+#### [예시] 이름에 `server`가 들어간 컨테이너만 보기
 
 ```cmd
 $ docker ps -a -f "name=server"
@@ -480,7 +549,7 @@ CONTAINER ID   IMAGE          COMMAND       CREATED      STATUS                 
 
 
 
-#### [예제] 컨테이너가 사용중인 볼륨(사이즈) 확인하기
+#### [예시] 컨테이너가 사용중인 볼륨(사이즈) 확인하기
 
 ```cmd
 # 이미지를 실행한 직후
@@ -508,20 +577,19 @@ docker logs [OPTIONS] <NAME_OR_ID>
 
 
 
-**주요 Options**
+**주요 옵션**
 
 | Option         | Short | Default | Description                                                  |
 | -------------- | ----- | ------- | ------------------------------------------------------------ |
-| `--details`    |       |         | Show extra details provided to logs                          |
-| `--follow`     | `-f`  |         | Follow log output                                            |
-| `--since`      |       |         | Show logs since timestamp (e.g. `2013-01-02T13:23:37Z`) or relative (e.g. `42m` for 42 minutes) |
-| `--tail`       | `-n`  | `all`   | Number of lines to show from the end of the logs             |
-| `--timestamps` | `-t`  |         | Show timestamps                                              |
-| `--until`      |       |         | API 1.35+ Show logs before a timestamp (e.g. `2013-01-02T13:23:37Z`) or relative (e.g. `42m` for 42 minutes) |
+| `--follow`     | `-f`  |         | 계속 로그를 표시합니다.                                      |
+| `--tail`       | `-n`  | `all`   | 마지막 `n`개의 로그를 표시합니다.                            |
+| `--timestamps` | `-t`  |         | `timestamp`를 표기합니다.                                    |
+| `--since`      |       |         | 특정 시간 이후에 발생한 로그만 표시합니다. <br />- timestamp (e.g. `2013-01-02T13:23:37Z`) <br />- relative (e.g. `42m`, `10s`, ...) |
+| `--until`      |       |         | 특정 시간 이전에 발생한 로그만 표시합니다. <br />- timestamp (e.g. `2013-01-02T13:23:37Z`) <br />- relative (e.g. `42m`, `10s`, ...) |
 
 
 
-#### [예제] `nginx`의 마지막 로그 확인하기
+#### [예시] `nginx`의 마지막 로그 확인하기
 
 `nginx` 컨테이너를 실행합니다. 
 
@@ -539,7 +607,7 @@ $ curl 127.0.0.1:80
 
 
 
-`nginx`의 마지막 로그를 확인합니다. 
+`nginx`의 마지막 1개 로그를 확인합니다. 
 
 ```cmd
 $ docker logs --tail 1 nginx
@@ -550,9 +618,9 @@ $ docker logs --tail 1 nginx
 
 
 
-#### [예제] 특정 기간의 로그 확인하기
+#### [예시] 특정 기간의 로그 확인하기
 
-매초마다 날짜를 출력하는 컨테이너를 다음과 같이 실행합니다. 
+다음과 같이 매초마다 날짜를 출력하는 컨테이너를 실행합니다. 
 
 ```cmd
 $ docker run --name clock -d busybox sh -c "while true; do $(echo date); sleep 1; done"
@@ -560,10 +628,21 @@ $ docker run --name clock -d busybox sh -c "while true; do $(echo date); sleep 1
 
 
 
-현재 시간으로부터 `20초` 전부터 `10초`간 발생한 로그를 다음과 같이 확인합니다. 
+현재 시간으로부터 `20초` 전부터 `10초`전까지 발생한 로그를 다음과 같이 확인합니다. 
 
 ```cmd
 $ docker logs -f --since 20s --until 10s clock && echo current time is %time%
+Fri Dec 29 18:44:37 UTC 2023
+Fri Dec 29 18:44:38 UTC 2023
+Fri Dec 29 18:44:39 UTC 2023
+Fri Dec 29 18:44:40 UTC 2023
+Fri Dec 29 18:44:41 UTC 2023
+Fri Dec 29 18:44:42 UTC 2023
+Fri Dec 29 18:44:43 UTC 2023
+Fri Dec 29 18:44:44 UTC 2023
+Fri Dec 29 18:44:45 UTC 2023
+Fri Dec 29 18:44:46 UTC 2023
+current time is  3:44:57.61
 ```
 
 
@@ -578,7 +657,7 @@ $ docker logs -f --since 20s --until 10s clock && echo current time is %time%
 docker attach [OPTIONS] CONTAINER
 ```
 
-Use `docker attach` to attach your terminal's standard input, output, and error (or any combination of the three) to a running container using the container's ID or name. This allows you to view its ongoing output or to control it interactively, as though the commands were running directly in your terminal.
+현재 실행중인 컨테이너의 터미널의 `STDIN`, `STDOUT`, `STDERR`에 접근합니다. 
 
 
 
@@ -597,14 +676,16 @@ Use `docker attach` to attach your terminal's standard input, output, and error 
 docker exec -it [OPTIONS] <ID_OR_NAME> /bin/bash|sh|...
 ```
 
-The `docker exec` command runs a new command in a running container.
-
-The command started using `docker exec` only runs while the container's primary process (`PID 1`) is running, and it is not restarted if the container is restarted.
+현재 실행중인 컨테이너에서 새로운 명령어를 실행합니다. 
 
 
 
 **주의사항**
 
+- 메인 프로세스가 실행되는 동안에만 명령어를 실행할 수 있습니다. 
+  
+- `exec`로 실행한 명령은 컨테이너 재실행(`start`)시 실행되지 않습니다. 
+  
 - 일부 컨테이너는 `bash`, `sh`와 같은 `shell`이 없을 수 있습니다. 
   - ex) `Scracth` 이미지, ... 
 
@@ -629,22 +710,22 @@ root@963c4fdec415:/ # echo $$
 
 
 
-#### `Attach`와 `Exec` 차이점 # TODO
+#### `Attach`와 `Exec` 차이점
 
-|                | Attach                                               | Exec                      |
-| -------------- | ---------------------------------------------------- | ------------------------- |
-| 접근 터미널    | 실행중인 Process의 standard input, output, and error | 새로운 process의 Terminal |
-| 접속 종료 방법 | `Ctrl + p + q`                                       | `Ctrl + c`                |
-| PID            | 1 (Main Process)                                     | > 1                       |
+|                | Attach                                 | Exec                      |
+| -------------- | -------------------------------------- | ------------------------- |
+| 접근 터미널    | 컨테이너의 `STDIN`, `STDOUT`, `STDERR` | 새로운 process의 Terminal |
+| 접속 종료 방법 | `Ctrl + p + q`                         | `Ctrl + c`                |
+| PID            | 1 (Main Process)                       | != 1                      |
 
-Attach는 실행중인 Process의 standard input, output, and error에 접근 -> Ctrl+c 할 경우 메인 프로세스가 종료되므로 Container 종료
 
-Exec는 새로운 process의 Terminal에 접근 -> Ctrl+c를 사용하여도 메인 프로세스가 살아있으므로 Container 유지
 
-**테스트 환경**
+#### [예시] `Attach`와 `Exec`를 각각 사용하여 `PID` 출력하기
 
-```
-docker run --rm -it -d --name server ubuntu
+다음 명령어를 사용하여 `ubuntu` 컨테이너를 실행합니다. 
+
+```cmd
+$ docker run --rm -it -d --name server ubuntu:22.04
 ```
 
 
@@ -688,7 +769,7 @@ docker exec [OPTIONS] CONTAINER COMMAND [ARG...]
 
 **주의사항**
 
-- 명령어는 `Working Directory`에서 실행되므로 파일 사용 시 주의가 필요합니다. 
+- 명령어는 `Working Directory`를 기준으로 실행되므로 파일 사용 시 주의가 필요합니다. 
 
 ```cmd
 $ docker exec clock sh -c "pwd"
@@ -713,15 +794,11 @@ docker pause <NAME_OR_ID>
 docker unpause <NAME_OR_ID>
 ```
 
-On Linux, this uses the cgroups freezer. Traditionally, when suspending a process the SIGSTOP signal is used, which is observable by the process  being suspended
 
-Send `SIGSTOP`(pause signal)
-
-The `docker unpause` command un-suspends all processes in the specified containers. On Linux, it does this using the freezer cgroup.
 
 **주의사항**
 
-- 재실행하는 경우 정지되어 있던 모든 프로세스가 재실행됩니다. 
+- 재실행하는 경우 정지되어 있던 `모든` 프로세스가 재실행됩니다. 
 
 ```cmd
 $ docker run -d --name server ubuntu
@@ -751,12 +828,10 @@ root       225     0  0 17:08 ?        00:00:00 /bin/bash -c while true; do $(ec
 
 ```shell
 # 종료
-docker stop <NAME_OR_IP>
+docker stop <NAME_OR_ID>
 # 시작
 docker start <NAME_OR_ID>
 ```
-
-The main process inside the container will receive `SIGTERM`, and after a grace period, `SIGKILL`. The first signal can be changed with the `STOPSIGNAL` instruction in the container's Dockerfile, or the `--stop-signal` option to `docker run`.
 
 
 
@@ -793,13 +868,12 @@ docker rm [OPTIONS] CONTAINER [CONTAINER...]
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Option      | Short | Default | Description                                             |
-| ----------- | ----- | ------- | ------------------------------------------------------- |
-| `--force`   | `-f`  |         | Force the removal of a running container (uses SIGKILL) |
-| `--link`    | `-l`  |         | Remove the specified link                               |
-| `--volumes` | `-v`  |         | Remove anonymous volumes associated with the container  |
+| Option      | Short | Default | Description                                                 |
+| ----------- | ----- | ------- | ----------------------------------------------------------- |
+| `--force`   | `-f`  |         | `SIGKILL` 시그널을 사용하여 실행중인 컨테이너를 삭제합니다. |
+| `--volumes` | `-v`  |         | 컨테이너의 `anonymous volumes`도 함께 삭제합니다.           |
 
 
 
@@ -817,23 +891,40 @@ $ docker rm $(docker ps -a -q -f status=exited)
 
 ### 컨테이너 리소스 사용량 조회
 
+> https://docs.docker.com/engine/reference/commandline/stats/
+
 ```shell
 docker stats [OPTIONS] [CONTAINER...]
 ```
 
 
 
-**예시**
+**주요 옵션**
 
-> `docker run --rm -it -d --name server ubuntu`
+| Option        | Short | Default | Description                              |
+| ------------- | ----- | ------- | ---------------------------------------- |
+| `--all`       | `-a`  |         | 모든 컨테이너를 표시합니다.              |
+| `--no-stream` |       |         | 결과를 지속적으로 업데이트하지 않습니다. |
+
+
+
+#### [예시] `ubuntu` 컨테이너 리소스 사용량 조회하기
+
+`ubuntu:22.04`를 이용하여 `server`를 실행합니다. 
+
+```cmd
+$ docker run --rm -it -d --name server ubuntu:22.04
+```
+
+
+
+`server`가 사용중인 리소스는 다음과 같이 확인할 수 있습니다. 
 
 ```cmd
 $ docker stats --no-stream server
 CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT   MEM %     NET I/O     BLOCK I/O   PIDS
 5c2817a20a00   server    0.00%     896KiB / 15.56GiB   0.01%     586B / 0B   0B / 0B     1
 ```
-
-
 
 
 
@@ -849,7 +940,7 @@ CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT   MEM %     NET I/O     BLO
 >
 > - Ubuntu 이미지 Tag = 22.04
 > - Container 이름 = server
-> - 업데이트 이후 컨테이너가 종료되면 안됩니다. 
+> - 업데이트 이후에도 컨테이너는 실행중이어야 합니다. 
 
 
 
@@ -899,7 +990,7 @@ Building dependency tree...
 
 **방법 2 - Attach 사용하기**
 
-> Ubuntu 이미지의 경우 기본적으로 `/bin/bash`를 실행하므로 attach를 사용하여도 무방합니다. 
+> Ubuntu 이미지의 경우 기본적으로 `/bin/bash`를 실행하므로 `attach`를 사용하여도 무방합니다. 
 
 ```cmd
 $ docker attach server
@@ -932,14 +1023,14 @@ Done
 
 >조건
 >
->- 이미지 = postgres:16.1-bullseye
->- Container 이름 = db
+>- `postgres:16.1-bullseye` 이미지를 사용합니다.
+>- 컨테이너의 이름은 `psql_db`로 설정합니다. 
 >- Container 생성시 다음 환경변수가 설정되어야 합니다. 
->  - POSTGRES_PASSWORD
+>   - POSTGRES_PASSWORD
 
 1. `PostgreSQL` DB 컨테이너를 실행하세요
 2. `exec`를 사용하여 컨테이너 터미널에 접근하세요
-3. `psql -U postgres`를 입력하여 `PostgreSQL`에 접속하세요
+3. 터미널에서 `psql -U postgres`를 입력하여 `PostgreSQL`에 접속하세요
 4. 다음 `Query`를 실행하세요
 
 ```sql
@@ -949,36 +1040,26 @@ CREATE TABLE IF NOT EXISTS cloud_wave (
 );
 ```
 
-5. `\dt`를 실행하여 다음 결과값이 보이는지 확인하세요
+5. `\dt`를 실행하여 다음과 같이 생성한 테이블이 보이는지 확인하세요
 
 ```
 postgres=# \dt
                List of relations
  Schema |        Name        | Type  |  Owner
 --------+--------------------+-------+----------
- public | savepaint_img_data | table | postgres
+ public |     cloud_wave     | table | postgres
 (1 row)
 ```
 
 
 
-
-
 ---
-
-
-
-
 
 ## 1.3. Docker 이미지 생성하기
 
 ### 이미지 생성하기
 
-> Cache & Layer 설명 필요
->
-> Scratch 설명
->
-> https://medium.com/analytics-vidhya/dockerizing-a-rest-api-in-python-less-than-9-mb-and-based-on-scratch-image-ef0ee3ad3f0a
+> https://docs.docker.com/engine/reference/commandline/build/
 
 ```cmd
 # docker build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
@@ -990,43 +1071,18 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 
 
-#### Scratch 이미지란?
+**주요 옵션**
 
-This image is most useful in the context of building base images (such as [`debian`](https://registry.hub.docker.com/_/debian/) and [`busybox`](https://registry.hub.docker.com/_/busybox/)) or super minimal images (that contain only a single binary and whatever it requires, such as [`hello-world`](https://registry.hub.docker.com/_/hello-world/)).
-
-As of Docker 1.5.0 (specifically, [`docker/docker#8827`](https://github.com/docker/docker/pull/8827)), `FROM scratch` is a no-op in the `Dockerfile`, and will not create an extra layer in your image (so a previously 2-layer image will be a 1-layer image instead).
-
-
-
-#### Alpine linux 이미지란?
-
-##### ABOUT
-
-Alpine Linux is an independent, non-commercial, general purpose Linux distribution designed for power users who appreciate security, simplicity and resource efficiency.
-
-##### SMALL
-
-Alpine Linux is built around musl libc and busybox. This makes it small and very resource efficient. A container requires no more than 8 MB and a minimal installation to disk requires around 130 MB of storage. Not only do you get a fully-fledged Linux environment but a large selection of packages from the repository.
-
-Binary packages are thinned out and split, giving you even more control over what you install, which in turn keeps your environment as small and efficient as possible.
-
-##### SIMPLE
-
-Alpine Linux is a very simple distribution that will try to stay out of your way. It uses its own package manager called apk, the OpenRC init system, script driven set-ups and that’s it! This provides you with a simple, crystal-clear Linux environment without all the noise. You can then add on top of that just the packages you need for your project, so whether it’s building a home PVR, or an iSCSI storage controller, a wafer-thin mail server container, or a rock-solid embedded switch, nothing else will get in the way.
-
-##### SECURE
-
-Alpine Linux was designed with security in mind. All userland binaries are compiled as Position Independent Executables (PIE) with stack smashing protection. These proactive security features prevent exploitation of entire classes of zero-day and other vulnerabilities.
-
-알파인 리눅스는 가볍고 간단한, 보안성을 목적으로 개발한 리눅스 배포판입니다.
-
-용량을 줄이기 위해 시스템의 기본 C runtime을 [glibc](https://ko.wikipedia.org/wiki/GNU_C_라이브러리) 대신 [musl libc](https://en.wikipedia.org/wiki/Musl) 를 사용하며 다양한 쉘 명령어는 GNU util 대신 [busybox](https://en.wikipedia.org/wiki/BusyBox) 를 탑재하였습니다.
-
-용량이 80M인 초경량화된 배포판이므로 Embbeded 나 네트웍 서버등 특정 용도에 적합하며 특히 도커(docker)에 채택되어 5M 크기의 리눅스 이미지로 유명합니다.
-
-
-
-
+| Option        | Short | Default | Description                                                |
+| ------------- | ----- | ------- | ---------------------------------------------------------- |
+| `--build-arg` |       |         | Set build-time variables                                   |
+| `--file`      | `-f`  |         | Name of the Dockerfile (Default is `PATH/Dockerfile`)      |
+| `--label`     |       |         | Set metadata for an image                                  |
+| `--no-cache`  |       |         | Do not use cache when building the image                   |
+| `--platform`  |       |         | API 1.38+ Set platform if server is multi-platform capable |
+| `--pull`      |       |         | Always attempt to pull a newer version of the image        |
+| `--quiet`     | `-q`  |         | Suppress the build output and print image ID on success    |
+| `--tag`       | `-t`  |         | Name and optionally a tag in the `name:tag` format         |
 
 
 
@@ -1055,26 +1111,31 @@ Alpine Linux was designed with security in mind. All userland binaries are compi
 
 
 
- #TODO multi stage
-
-> https://docs.docker.com/build/building/multi-stage/
-
- #TODO platform별 이미지 제작 -> buildx
-
-
-
-#### Dockerfile 작성 Tip
-
-- 가급적 이미지는 작게 -> 보안성 증대, CICD시 cache를 못쓰는 경우도 있음
-- 캐시를 적극적으로 활용하기 위해서 변동성이 큰것은 나중으로
-- 
-
-
-
 #### 주의사항
 
 - `-f`를 통해 사용할 `Dockerfile`을 명시하지 않는 경우, 파일 이름이 `Dockerfile`인 파일이 사용됩니다. 
 - `Dockerfile`내 모든 상대 경로들은 `build`시 입력된 `Path`를 기준으로 계산됩니다. 
+- `cache`를 사용할 경우, `apt-get`을 통해 설치한 패키지 버젼이 최신이 아닐 수 있습니다. 
+
+
+
+#### 많이 사용하는 `base` 이미지
+
+##### - Scratch 이미지
+
+> https://hub.docker.com/_/scratch
+
+`binary`를 실행하기 위한 최소한의 이미지입니다.
+`Dockerfile`에서 사용했을 시, 별도의 `layer`가 추가되지 않습니다. 
+
+
+
+##### - Alpine linux
+
+> https://hub.docker.com/_/alpine
+
+`Alpine` 리눅스는 용량이 5Mb 이하로 매우 가벼우며 보안성이 뛰어납니다.
+많은 이미지들이 `alpine`을 기반으로한 경량화된 이미지를 함께 제공합니다. 
 
 
 
@@ -1084,13 +1145,15 @@ Alpine Linux was designed with security in mind. All userland binaries are compi
 
 ### 연습문제
 
-#### [연습] Go 서버용 이미지 제작하기
+#### [연습] Go 서버 이미지 제작하기
 
+> 다음 3개 이미지를 기반으로 이미지를 빌드합니다. 
+>
 > - Ubuntu
 > - Alpine
 > - Scratch
 
-폴더 구조는 다음과 같습니다. 
+전체적인 폴더 구조는 다음과 같습니다. 
 
 ```
 .
@@ -1257,7 +1320,9 @@ RUN apt-get install -y docker-ce docker-ce-cli
 $ docker build -t cloudwave:base.v1 .
 ```
 
-`docker`가 설치되었다면 다음과 같은 결과를 얻을 수 있습니다. 
+
+
+정상적으로 `docker`가 설치되었다면 다음과 같은 결과를 얻을 수 있습니다. 
 
 ```cmd
 $ docker run cloudwave:aws-cli docker version
@@ -1274,7 +1339,13 @@ Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docke
 
 
 
-#### TODO [실습] Web Application 실행하기
+#### [실습] `Arg`를 이용하여 `base`이미지 변경하기
+
+1. `Go 서버 이미지 제작하기`에서 사용한 `Dockerfile`을 수정합니다.
+   1. `ARG`이름은 `OS`로 설정합니다.
+   2. `ARG`를 이용하여 `Base 이미지`를 입력받아야 합니다.  
+   3. `ARG`의 값을 환경변수(`BASE`)에 저장합니다.  
+2. `--build-args` 옵션을 사용하여 `ubuntu:22.04`, `alpine:latest`를 기반으로한 이미지를 생성합니다. 
 
 
 
