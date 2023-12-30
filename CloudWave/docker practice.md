@@ -1073,18 +1073,19 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 **주요 옵션**
 
-| Option        | Short | Default | Description                                                |
-| ------------- | ----- | ------- | ---------------------------------------------------------- |
-| `--build-arg` |       |         | Set build-time variables                                   |
-| `--file`      | `-f`  |         | Name of the Dockerfile (Default is `PATH/Dockerfile`)      |
-| `--label`     |       |         | Set metadata for an image                                  |
-| `--no-cache`  |       |         | Do not use cache when building the image                   |
-| `--platform`  |       |         | API 1.38+ Set platform if server is multi-platform capable |
-| `--pull`      |       |         | Always attempt to pull a newer version of the image        |
-| `--quiet`     | `-q`  |         | Suppress the build output and print image ID on success    |
-| `--tag`       | `-t`  |         | Name and optionally a tag in the `name:tag` format         |
+| Option        | Short | Default | Description                                        |
+| ------------- | ----- | ------- | -------------------------------------------------- |
+| `--build-arg` |       |         | `ARG`를 설정합니다.                                |
+| `--file`      | `-f`  |         | `Dockerfile`의 경로를 지정합니다.                  |
+| `--label`     |       |         | 라벨을 추가합니다.                                 |
+| `--no-cache`  |       |         | 이미지 빌드시 캐시를 사용하지 않습니다.            |
+| `--platform`  |       |         | `platform`을 지정합니다.                           |
+| `--pull`      |       |         | 관련된 이미지를 저장 유무에 관계없이 `pull`합니다. |
+| `--tag`       | `-t`  |         | 이름과 `Tag`를 설정합니다.                         |
 
 
+
+**주의사항**
 
 ### Dockerfile
 
@@ -1365,7 +1366,7 @@ docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
 
 
 
-#### **예시**
+#### [예시] 이미지 이름 변경하기
 
 ```cmd
 $ docker tag ubuntu:22.04 my-ubuntu:v1
@@ -1383,7 +1384,7 @@ ubuntu                             22.04           174c8c134b2a   9 days ago    
 docker push [OPTIONS] NAME[:TAG]
 ```
 
-**주요 Options**
+**주요 옵션**
 
 | Option       | Short | Default | Description                                 |
 | ------------ | ----- | ------- | ------------------------------------------- |
@@ -1394,12 +1395,12 @@ docker push [OPTIONS] NAME[:TAG]
 **주의사항**
 
 - `Docker hub`가 아닌 `ECR` 또는 자체 구축한 `Hub`와 같이 별도의 `registry`에 업로드하려는 경우, 
-  이름이 `full image name` 형식으로 작성되어야 합니다. 
+  이름은 `full image name` 형식으로 작성되어야 합니다. 
 - `Push`전 `docker login`을 통해서 사용할 `registry`에 인증해야 합니다.
 
 
 
-#### full image name 포맷
+#### Full image name 포맷
 
 ```tex
 [HOST[:PORT_NUMBER]/]PATH
@@ -1438,13 +1439,13 @@ docker login [OPTIONS] [SERVER[:PORT]]
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Option             | Short | Default | Description                  |
-| ------------------ | ----- | ------- | ---------------------------- |
-| `--password`       | `-p`  |         | Password                     |
-| `--password-stdin` |       |         | Take the password from stdin |
-| `--username`       | `-u`  |         | Username                     |
+| Option             | Short | Default | Description                             |
+| ------------------ | ----- | ------- | --------------------------------------- |
+| `--password`       | `-p`  |         | password                                |
+| `--password-stdin` |       |         | `STDIN`을 통해 password를 입력받습니다. |
+| `--username`       | `-u`  |         | Username                                |
 
 
 
@@ -1652,19 +1653,7 @@ $ aws ecr list-images --repository-name cloudwave
 
 
 
-#### TODO [실습] EC2에서 Web Application 실행하기
-
-
-
-
-
-
-
-
-
 ---
-
-
 
 ## 1.5. Docker 볼륨
 
@@ -1681,8 +1670,8 @@ Commands:
   rm          Remove one or more volumes
 ```
 
-볼륨이란 무엇일까요? 볼륨은 컨테이너와 관련된 특별한 유형의 디렉터리 입니다. 일반적으로 볼륨은 모든 데이터 유형을 저장할 수 있기 때문에 데이터 볼륨이라고 합니다. 코드가 될 수도 있고 로그파일 일 수도 있습니다. 볼륨을 사용하면 컨테이너 간에 데이터를 공유할 수 있고 여러 큰 이너가 볼륨에 쓰게 하거나, 하나 이상의 볼륨의 쓰기 작업을 수행하는 단일 컨테이너만 존재할 수도 있습니다.
-이러한 것들에 대한 장점은 이미지가 업데이트 될 때 데이터 볼륨에 영향을 미치지 않는다는 것입니다. 따라서 컨테이너가 컴퓨터에서 삭제된 경우에도 데이터 볼륨은 남아서 여전히 제어가 가능하게 할 수 있습니다.
+- 컨테이너에서 사용 및 관리하는 저장 공간입니다.
+- 컨테이너에 종속되어 있지 않으므로, 컨테이너의 라이프 사이클을 따라가지 않습니다. 
 
 
 
@@ -1696,11 +1685,11 @@ docker volume create [OPTIONS] [VOLUME]
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Option   | Description         |
-| -------- | ------------------- |
-| `--name` | Specify volume name |
+| Option   | Short | Default | Description        |
+| -------- | ----- | ------- | ------------------ |
+| `--name` |       |         | 이름을 지정합니다. |
 
 
 
@@ -1714,7 +1703,16 @@ docker volume ls [OPTIONS]
 
 
 
-#### [예제] 사용하지 않는 볼륨 목록 보기
+**주요 옵션**
+
+| Option     | Short | Default | Description                           |
+| ---------- | ----- | ------- | ------------------------------------- |
+| `--filter` | `-f`  |         | 지정된 조건에 맞는 볼륨만 표시합니다. |
+| `--quiet`  | `-q`  |         | 볼륨 이름만 표시합니다.               |
+
+
+
+#### [예시] 사용하지 않는 볼륨 목록 보기
 
 ```cmd
 $ docker volume ls -f "dangling=true"  # or "dangling=1"
@@ -1734,10 +1732,10 @@ docker volume inspect [OPTIONS] VOLUME [VOLUME...]
 
 
 
-#### [예제] 볼륨 생성 일자 확인하기
+#### [예시] 볼륨 생성 일자 확인하기
 
 ```cmd
-$ docker volume inspect --format "{{ .CreatedAt }}" fecea4ffd139a0d85b735f9ea8fe247bfabc9227df31ac9ff1d8e66f6b77d229
+$ docker volume inspect --format "{{ .CreatedAt }}" VOLUME_NAME
 2023-12-22T01:23:07Z
 ```
 
@@ -1747,21 +1745,32 @@ $ docker volume inspect --format "{{ .CreatedAt }}" fecea4ffd139a0d85b735f9ea8fe
 
 > https://docs.docker.com/engine/reference/commandline/volume_rm/
 
-`volume rm`은 한 개 이상의 명시된 볼륨들을 삭제하는 명령입니다. 
-
 ```shell
 docker volume rm [OPTIONS] VOLUME [VOLUME...]
 ```
 
+`volume rm`은 한 개 이상의 명시된 볼륨들을 삭제하는 명령입니다. 
 
+
+
+### 모든 볼륨 삭제
 
 > https://docs.docker.com/engine/reference/commandline/volume_prune/
-
-`volume prune`은 사용하지 않는 모든 볼륨을 삭제하는 명령어 입니다.
 
 ```sh
 docker volume prune [OPTIONS]
 ```
+
+`volume prune`은 사용하지 않는 모든 `anonymous ` 볼륨을 삭제하는 명령어 입니다.
+
+
+
+**주요 옵션**
+
+| Option     | Short | Default | Description                           |
+| ---------- | ----- | ------- | ------------------------------------- |
+| `--all`    | `-a`  |         | 사용하지 않는 모든 볼륨을 삭제합니다. |
+| `--filter` |       |         | 필터링 조건을 설정합니다.             |
 
 
 
@@ -1771,18 +1780,16 @@ docker volume prune [OPTIONS]
 
 #### [연습] Volume에 DB 데이터 저장하기
 
->조건
+>- `postgres:16.1-bullseye` 이미지를 사용합니다.
+>- 컨테이너의 이름은 `psql_db`로 설정합니다. 
+>- 컨테이너 생성시 다음 환경변수가 설정되어야 합니다. 
+>  - POSTGRES_PASSWORD
 >
->- 이미지 = postgres:16.1-bullseye
->- Container 이름 = db
->- Container 생성시 다음 환경변수가 설정되어야 합니다. 
->     - POSTGRES_PASSWORD
->- Container는 `--rm` 옵션을 부여하여 생성합니다. 
 >- 생성한 Volume은 컨테이너의 `/var/lib/postgresql/data`에 마운트합니다. 
 
 
 
-`DB`에서 사용할 volume을 다음과 같이 생성합니다. 
+`DB`에서 사용할 볼륨을 다음과 같이 생성합니다. 
 
 ```cmd
 $ docker volume create db_data
@@ -1791,7 +1798,7 @@ db_data
 
 
 
-생성된 volume은 `docker volume list` 명령어를 통해서 확인할 수 있습니다. 
+생성된 볼륨은 `docker volume list` 명령어를 통해서 확인할 수 있습니다. 
 
 ```cmd
 $ docker volume list
@@ -1801,7 +1808,8 @@ local     db_data
 
 
 
-PostgreSQL의 데이터는 `/var/lib/postgresql/data`에 저장되므로 해당 디렉토리에 `db_data` 볼륨을 마운트 시킵니다. 
+`PostgreSQL`의 데이터는 `/var/lib/postgresql/data`에 저장됩니다. 
+그러므로, `db_data` 볼륨을 해당 디렉토리에 마운트합니다. 
 
 ```cmd
 $ docker run --rm -d --name db -v db_data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
@@ -1809,10 +1817,10 @@ $ docker run --rm -d --name db -v db_data:/var/lib/postgresql/data -e POSTGRES_P
 
 
 
-DB에 접속하여 테이블을 생성해줍니다. 
+컨테이너 터미널에 접근하여 `psql`을 이용해 DB에 접속합니다. 
 
 ```cmd
-$ docker exec -it db /bin/bash
+$ docker exec -it psql_db /bin/bash
 root@7523c983f729:/# psql -U postgres
 psql (16.1 (Debian 16.1-1.pgdg110+1))
 Type "help" for help.
@@ -1820,7 +1828,10 @@ Type "help" for help.
 
 
 
+SQL을 이용하여 테이블을 생성합니다. 
+
 ```sql
+# SQL
 CREATE TABLE IF NOT EXISTS cloud_wave (
     id SERIAL PRIMARY KEY,
     timestamp timestamp
@@ -1829,7 +1840,7 @@ CREATE TABLE IF NOT EXISTS cloud_wave (
 
 
 
-다음 명령어를 이용하여 생성한 테이블을 확인합니다. 
+생성한 테이블을 `\dt`를 이용하여 확인합니다. 
 
 ```cmd
 postgres=# \dt
@@ -1845,11 +1856,11 @@ postgres=# \dt
 DB를 종료합니다. 
 
 ```cmd
-$ docker stop db
-db
+$ docker stop psql_db
+psql_db
 
-# 컨테이너 이름에 `db`가 포함된 컨테이너 목록을 보여줍니다. 
-$ docker ps -a -f name=db
+# 컨테이너 이름에 `psql_db`가 포함된 컨테이너 목록을 보여줍니다. 
+$ docker ps -a -f name=psql_db
 CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 
@@ -1882,11 +1893,9 @@ postgres=# \dt
 
 
 
-#### [연습] bind mount를 사용하여 Source Code 변경하기
+#### [연습] `bind mount`를 사용하여 소스코드 변경하기
 
-> 조건
->
-> - `./app` 폴더는 `/code/app` 폴더와 바인드 되어야 합니다. 
+> - Host의 `./app`는 컨테이너의 `/code/app`와 바인드 되어야 합니다. 
 >- 이미지 이름은 `was`로 설정합니다. 
 
 폴더 구조는 다음과 같습니다. 
@@ -1938,7 +1947,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
 `Dockerfile`이 위치한 폴더에서 다음 명령어를 실행하여 이미지를 빌드합니다.
 
 ```cmd
-$ docker build -t was:fast.2 .
+$ docker build -t was:fast.1 .
 ```
 
 
@@ -1946,7 +1955,7 @@ $ docker build -t was:fast.2 .
 다음 명령어를 통해서 `FastAPI` 서버를 실행합니다. 
 
 ```cmd
-$ docker run --name bind -p 80:80 -v <FOLDER_PATH>\app:/code/app was:fast.2
+$ docker run --name bind -p 80:80 -v <FOLDER_PATH>\app:/code/app was:fast.1
 INFO:     Will watch for changes in these directories: ['/code']
 INFO:     Uvicorn running on http://0.0.0.0:80 (Press CTRL+C to quit)
 INFO:     Started reloader process [1] using statreload
@@ -1988,7 +1997,7 @@ def get_hostname():
 
 
 
-`http://localhost/redoc`에 접속하여 `get_hostname` API가 추가된 것을 확인합니다.
+`http://localhost/redoc`에 접속하면 `get_hostname` API가 추가된 것을 확인할 수 있습니다. 
 
 ![fastapi_redoc_2](docker_practice.assets/fastapi_redoc_2.PNG)
 
@@ -2015,20 +2024,6 @@ Commands:
 
 
 
-#TODO
-
-- 복수개의 Network가 컨테이너에 할당될 수 있음
-- Driver 종류? => 이 내용이 필요한가?
-
-
-
-- `bridge`: The default network driver. If you don't specify a driver, this is the type of network you are creating. Bridge networks are commonly used when your application runs in a container that needs to communicate with other containers on the same host. See [Bridge network driver](https://docs.docker.com/network/drivers/bridge/).
-- `host`: Remove network isolation between the container and the Docker host, and use the host's networking directly. See [Host network driver](https://docs.docker.com/network/drivers/host/).
-- `overlay`: Overlay networks connect multiple Docker daemons together and enable Swarm services and containers to communicate across nodes. This strategy removes the need to do OS-level routing. See [Overlay network driver](https://docs.docker.com/network/drivers/overlay/).
-- `ipvlan`: IPvlan networks give users total control over both IPv4 and IPv6 addressing. The VLAN driver builds on top of that in giving operators complete control of layer 2 VLAN tagging and even IPvlan L3 routing for users interested in underlay network integration. See [IPvlan network driver](https://docs.docker.com/network/drivers/ipvlan/).
-- `macvlan`: Macvlan networks allow you to assign a MAC address to a container, making it appear as a physical device on your network. The Docker daemon routes traffic to containers by their MAC addresses. Using the `macvlan` driver is sometimes the best choice when dealing with legacy applications that expect to be directly connected to the physical network, rather than routed through the Docker host's network stack. See [Macvlan network driver](https://docs.docker.com/network/drivers/macvlan/).
-- `none`: Completely isolate a container from the host and other containers. `none` is not available for Swarm services. See [None network driver](https://docs.docker.com/network/drivers/none/).
-
 ### 네트워크 생성
 
 > https://docs.docker.com/engine/reference/commandline/network_create/
@@ -2041,9 +2036,17 @@ docker network create [OPTIONS] NETWORK
 
 #### 네트워크 드라이버
 
-- `bridge`: 하나의 호스트 컴퓨터 내에서 컨테이너들간 소통할 수 있도록 한다.
-- `host`: 컨터이너를 호스트 컴퓨터와 동일한 네트워크 상에 올린다.
-- `overlay`: 여러 호스트에 분산되어 있는 컨테이너들 간에 연결을 위해 사용한다.
+- `bridge`
+
+동일한 `Host` 컴퓨터 내에서 컨테이너끼리 통신하기 위해 사용합니다. 
+
+- `host` 
+
+컨테이너가 `Host`와 동일한 네트워크를 사용합니다.
+
+- `none` 
+
+`Host`와 완벽히 격리된 네트워크입니다. 
 
 
 
@@ -2053,7 +2056,7 @@ docker network create [OPTIONS] NETWORK
 
 
 
-#### [예제] `bridge` 네트워크 생성하기
+#### [예시] `bridge` 네트워크 생성하기
 
 ```cmd
 $ docker network create -d bridge private
@@ -2076,7 +2079,16 @@ Aliases:
 
 
 
-#### [예제] `host` 네트워크만 조회하기
+**주요 옵션**
+
+| Option     | Short | Default | Description                               |
+| ---------- | ----- | ------- | ----------------------------------------- |
+| `--filter` | `-f`  |         | 지정된 조건에 맞는 네트워크만 표시합니다. |
+| `--quiet`  | `-q`  |         | 네트워크 ID만 표기합니다.                 |
+
+
+
+#### [예시] `host` 네트워크만 조회하기
 
 ```cmd
 $ docker network ls -f driver=host
@@ -2096,7 +2108,7 @@ docker network inspect [OPTIONS] NETWORK [NETWORK...]
 
 
 
-**output**
+#### [예시] `private` 네트워크 조회하기
 
 ```cmd
 $ docker network inspect private
@@ -2144,6 +2156,15 @@ docker network connect [OPTIONS] NETWORK CONTAINER
 
 
 
+**주요 옵션**
+
+| Option    | Short | Default | Description                  |
+| --------- | ----- | ------- | ---------------------------- |
+| `--alias` |       |         | 네트워크 alias를 추가합니다. |
+| `--ip`    |       |         | IPv4 주소를 지정합니다.      |
+
+
+
 ### 네트워크 연결 제거
 
 > https://docs.docker.com/engine/reference/commandline/network_disconnect/
@@ -2158,23 +2179,31 @@ docker network disconnect [OPTIONS] NETWORK CONTAINER
 
 > https://docs.docker.com/engine/reference/commandline/network_rm/
 
-`network rm`은 한 개 이상의 명시된 네트워크들을 삭제하는 명령입니다. 
-
 ```sh
 docker network rm NETWORK [NETWORK...]
 ```
 
+`network rm`은 한 개 이상의 명시된 네트워크들을 삭제하는 명령입니다. 
 
+
+
+### 모든 네트워크 삭제
 
 > https://docs.docker.com/engine/reference/commandline/network_prune/
-
-`network prune`은 **사용하지 않는** 모든 네트워크들을 삭제하는 명령어 입니다.
 
 ```sh
 docker network prune [OPTIONS]
 ```
 
+`network prune`은 **사용하지 않는** 모든 네트워크들을 삭제하는 명령어 입니다.
 
+
+
+**주요 옵션**
+
+| Option     | Short | Default | Description               |
+| ---------- | ----- | ------- | ------------------------- |
+| `--filter` |       |         | 필터링 조건을 설정합니다. |
 
 
 
@@ -2381,15 +2410,13 @@ PING web_app (172.19.0.4) 56(84) bytes of data.
 
 
 
-#### TODO [실습] 연습 문제(`bridge` 네트워크를 이용하여 컨테이너 연결하기)에서 생성한 `DB`를 `alias`를 이용하여 연결하기
+#### [실습]  `DB`를 `alias`를 이용하여 연결하기
 
-> 
+> 연습 문제(`bridge` 네트워크를 이용하여 컨테이너 연결하기)에서 `IP` 대신 `DNS`를 이용하세요
 
-- 
-
-
-
-
+- `PostgreSQL`과 `PgAdmin` 컨테이너를 생성합니다
+-  `private` 네트워크를 `DB`에 연결하면서 `Alias`를 설정합니다.
+- `PgAdmin`에서 `IP` 대신 `Alias`를 이용하여 `DB`에 연결합니다. 
 
 
 
@@ -2407,22 +2434,24 @@ PING web_app (172.19.0.4) 56(84) bytes of data.
 docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
 ```
 
-**주요 Options**
 
-| Option      | Short | Default | Description                                                |
-| ----------- | ----- | ------- | ---------------------------------------------------------- |
-| `--author`  | `-a`  |         | Author (e.g., `John Hannibal Smith <hannibal@a-team.com>`) |
-| `--change`  | `-c`  |         | Apply Dockerfile instruction to the created image          |
-| `--message` | `-m`  |         | Commit message                                             |
-| `--pause`   | `-p`  | `true`  | Pause container during commit                              |
+
+**주요 옵션**
+
+| Option      | Short | Default | Description                                     |
+| ----------- | ----- | ------- | ----------------------------------------------- |
+| `--author`  | `-a`  |         | `Author`를 설정합니다.                          |
+| `--change`  | `-c`  |         | 추가로 적용할 `Dockerfile` 명령어를 설정합니다. |
+| `--message` | `-m`  |         | Commit message                                  |
+| `--pause`   | `-p`  | `true`  | `commit`동안 컨테이너를 중지합니다.             |
 
 
 
 **주의사항**
 
 - `Production`에서 사용할 이미지라면 `commit` 대신  `Dockerfile`을 기반으로 제작하는 것이 좋습니다. 
-- 마운트된 볼륨(`volume`)에 저장된 데이터는 포함되지 않습니다. 
-- `--pause` 옵션을 설정하지 않은 경우, `commit`하는 동안 컨테이너를 중지(`pause`)합니다. 
+- 볼륨(`volume`)에 저장된 데이터는 포함되지 않습니다. 
+- `--pause` 옵션을 설정하지 않은 경우, `commit`하는 동안 컨테이너를 중지(`pause`)됩니다. 
 - `--change`에서 지원하는 명령어는 다음과 같습니다
     - CMD
     - ENTRYPOINT
@@ -2440,13 +2469,38 @@ docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
 
 > https://docs.docker.com/engine/reference/commandline/buildx/
 
+```
+Usage:  docker buildx [OPTIONS] COMMAND
+
 Extended build capabilities with BuildKit
 
-https://gurumee92.tistory.com/311
+Options:
+      --builder string   Override the configured builder instance
+
+Management Commands:
+  imagetools  Commands to work on images in registry
+
+Commands:
+  bake        Build from a file
+  build       Start a build
+  create      Create a new builder instance
+  du          Disk usage
+  inspect     Inspect current builder instance
+  ls          List builder instances
+  prune       Remove build cache
+  rm          Remove a builder instance
+  stop        Stop builder instance
+  use         Set the current builder instance
+  version     Show buildx version information
+
+Run 'docker buildx COMMAND --help' for more information on a command.
+```
 
 
 
 #### builder 목록 확인하기
+
+> https://docs.docker.com/engine/reference/commandline/buildx_ls/
 
 ```shell
 docker buildx ls
@@ -2454,7 +2508,9 @@ docker buildx ls
 
 
 
-**출력 예시**
+##### [예시] 현재 사용중인 `builder` 확인하기
+
+현재 선택된 `builder`는 `*`이 붙어있습니다. 
 
 ```cmd
 $ docker buildx ls
@@ -2465,13 +2521,9 @@ default *       docker
 
 
 
-**주의사항**
-
-- 현재 선택된 `builder`는 `*`이 붙어있습니다. 
-
-
-
 #### builder 생성하기
+
+> https://docs.docker.com/engine/reference/commandline/buildx_create/
 
 ```shell
 docker buildx create [OPTIONS] [CONTEXT|ENDPOINT]
@@ -2479,50 +2531,19 @@ docker buildx create [OPTIONS] [CONTEXT|ENDPOINT]
 
 
 
-| Option              | Short | Default | Description                                                  |
-| ------------------- | ----- | ------- | ------------------------------------------------------------ |
-| `--append`          |       |         | Append a node to builder instead of changing it              |
-| `--bootstrap`       |       |         | Boot builder after creation                                  |
-| `--builder`         |       |         |                                                              |
-| `--buildkitd-flags` |       |         | Flags for buildkitd daemon                                   |
-| `--config`          |       |         | BuildKit config file                                         |
-| `--driver`          |       |         | Driver to use (available: `docker-container`, `kubernetes`, `remote`) |
-| `--driver-opt`      |       |         | Options for the driver                                       |
-| `--leave`           |       |         | Remove a node from builder instead of changing it            |
-| `--name`            |       |         | Builder instance name                                        |
-| `--node`            |       |         | Create/modify node with given name                           |
-| `--platform`        |       |         | Fixed platforms for current node                             |
-| `--use`             |       |         | Set the current builder instance                             |
-
-
-
-##### driver 목록
-
-- docker
-
-Uses the builder that is built into the Docker daemon. With this driver, the [`--load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) flag is implied by default on `buildx build`. However, building multi-platform images or exporting cache is not currently supported.
-
-- docker-container
-
-Uses a BuildKit container that will be spawned via Docker. With this driver, both building multi-platform images and exporting cache are supported.
-
-Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
-
-- kubernetes
-
-Uses Kubernetes pods. With this driver, you can spin up pods with defined BuildKit container image to build your images.
-
-Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
-
-- remote
-
-Uses a remote instance of buildkitd over an arbitrary connection. With this driver, you manually create and manage instances of buildkit yourself, and configure buildx to point at it.
-
-Unlike `docker` driver, built images will not automatically appear in `docker images` and [`build --load`](https://docs.docker.com/engine/reference/commandline/buildx_build/#load) needs to be used to achieve that.
+| Option         | Short | Default | Description                                                  |
+| -------------- | ----- | ------- | ------------------------------------------------------------ |
+| `--driver`     |       |         | 사용할 드라이버를 설정합니다. <br />(`docker-container`, `kubernetes`, `remote`) |
+| `--driver-opt` |       |         | 드라이버에 따른 옵션을 설정합니다.                           |
+| `--name`       |       |         | `builder` 이름을 지정합니다.                                 |
+| `--platform`   |       |         | `platform`을 지정합니다.                                     |
+| `--use`        |       |         | 생성 후 해당 `builder`를 사용합니다.                         |
 
 
 
 #### builder 정보 조회
+
+> https://docs.docker.com/engine/reference/commandline/buildx_inspect/
 
 ```shell
 docker buildx inspect [NAME]
@@ -2530,7 +2551,7 @@ docker buildx inspect [NAME]
 
 
 
-**출력 예시**
+##### [예시] 현재 사용중인 `builder` 조회하기
 
 ```cmd
 $ docker buildx inspect --bootstrap
@@ -2565,9 +2586,9 @@ GC Policy rule#3:
 
 
 
-
-
 #### builder 선택하기
+
+> https://docs.docker.com/engine/reference/commandline/buildx_use/
 
 ```shell
 docker buildx use [OPTIONS] NAME
@@ -2575,10 +2596,9 @@ docker buildx use [OPTIONS] NAME
 
 
 
-| Option      | Short | Default | Description                                |
-| ----------- | ----- | ------- | ------------------------------------------ |
-| `--default` |       |         | Set builder as default for current context |
-| `--global`  |       |         | Builder persists context changes           |
+| Option      | Short | Default | Description             |
+| ----------- | ----- | ------- | ----------------------- |
+| `--default` |       |         | `default`로 설정합니다. |
 
 
 
@@ -2592,29 +2612,57 @@ docker buildx build [OPTIONS] PATH | URL | -
 
 
 
-- Single
+**주요 옵션**
 
-- Multi
+| Option        | Short | Default | Description                                                  |
+| ------------- | ----- | ------- | ------------------------------------------------------------ |
+| `--build-arg` |       |         | `ARG`를 설정합니다.                                          |
+| `--file`      | `-f`  |         | `Dockerfile`의 경로를 지정합니다.                            |
+| `--label`     |       |         | 라벨을 추가합니다.                                           |
+| `--no-cache`  |       |         | 이미지 빌드시 캐시를 사용하지 않습니다.                      |
+| `--platform`  |       |         | `platform`을 지정합니다.                                     |
+| `--pull`      |       |         | 관련된 이미지를 저장 유무에 관계없이 `pull`합니다.           |
+| `--load`      |       |         | 이미지를 `host`에 저장합니다.<br />(`--output=type=docker`와 동일합니다.) |
+| `--push`      |       |         | 이미지를 `registry`에 저장합니다<br />(`--output=type=registry`와 동일합니다.) |
+| `--tag`       | `-t`  |         | 이름과 `Tag`를 설정합니다.                                   |
 
+
+
+**주의사항**
+
+- `docker` 드라이버를 사용하는 `builder`는 단일 `platform` 이미지만 빌드할 수 있습니다. 
+- `docker` 드라이버가 아닌 다른 드라이버를 사용하는 경우 `--load`를 사용하여야 이미지를 가져올 수 있습니다. 
+  - `--load`는 `export`를 이용하여 이미지를 추출하고 `import`합니다. 
+- 2개 이상의 `platform`을 지원하는 이미지를 제작하는 경우 `--load`가 불가능하므로 `--push`를 통해 `registry`로 바로 업로드해야 합니다. 
+
+
+
+##### [예시] `linux/arm/v7`용 이미지 제작하기
+
+현재 `builder`에서 지원하는 `platform`을 다음과 같이 확인합니다. 
+
+```cmd
+$ docker buildx inspect --bootstrap
+Name:          multi-arch-builder
+Driver:        docker-container
+Last Activity: 2023-12-23 13:46:16 +0000 UTC
+
+...
+Platforms: linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/arm64, linux/riscv64, linux/ppc64le, linux/s390x, linux/386, linux/mips64le, linux/mips64, linux/arm/v7, linux/arm/v6
+...
 ```
---load를 사용하면
-export를 이용하여 image를 추출하고 import함
-```
 
 
 
-
-
-##### [예시] `ARM`용 이미지 제작하기
+`--platform` 옵션을 이용하여 `linux/arm/v7`용 이미지를 제작합니다. 
 
 ```cmd
 $ docker buildx build --platform linux/arm/v7 -t cloudwave:arm .
 ...
-$ docker image inspect cloudwave:multi-platform -f "arch: {{ .Architecture }}/{{ .Variant }}" 
+
+$ docker image inspect cloudwave:arm -f "arch: {{ .Architecture }}/{{ .Variant }}" 
 arch: arm/v7
 ```
-
-
 
 
 
@@ -2622,7 +2670,7 @@ arch: arm/v7
 
 ### 연습 문제
 
-#### [연습] Commit을 이용하여 패키지가 설치된 이미지 생성하기
+#### [연습] Commit을 이용하여 패키지가 추가로 설치된 이미지 생성하기
 
 다음과 같이 `Ubuntu` 컨테이너를 실행합니다. 
 
@@ -2633,7 +2681,7 @@ ebb9fe13e5cfb0747e5bea1db7c41ef30bf416bdcd643d7311e161ee4300b628
 
 
 
-`curl`이 설치 여부를 확인합니다. 
+`curl` 설치 여부를 확인합니다. 
 
 ```cmd
 $ docker exec base apt list --installed "curl*"
@@ -2685,7 +2733,7 @@ curl/jammy-updates,jammy-security,now 7.81.0-1ubuntu1.15 amd64 [installed]
 
 
 
-#### [연습] 실행중인 컨테이너를 이용하여 Port를 추가로 `Expose`하기
+#### [연습] 실행중인 컨테이너의 Port를 추가로 `Expose`하기
 
 컨테이너를 다음과 같이 생성하고, `Port`가 노출되지 않은 것을 체크합니다다. 
 
@@ -2698,16 +2746,18 @@ CONTAINER ID   IMAGE          COMMAND                   CREATED       STATUS    
 
 
 
-다음과 같이 80번 포트를 `Expose`하는 명령어를 추가하여 실행중인 컨테이너를 `commit` 합니다. 
+`--change` 옵션을 이용하여 80번 포트를 `Expose`합니다. 
+
+이 때, 기존에 실행중인 컨테이너가 멈추지 않도록 `--pause`를 `false`로 설정합니다. 
 
 ```cmd
-$ docker commit --change="EXPOSE 80" base commit:v1
+$ docker commit --change="EXPOSE 80" --pause=false base commit:v1
 sha256:f908d82f79101ec792d5383a627c8ffa9dd92d65bf5674cf0ad8e9c0c7c943b2
 ```
 
 
 
-저장한 이미지를 사용하여 새로운 컨테이너를 생성하고 80번 포트가 열려있는 것을 확인합니다. 
+저장한 이미지를 사용하여 새로운 컨테이너를 생성하고, 80번 포트가 열려있는 것을 확인합니다. 
 
 ```cmd
 $ docker run -itd commit:v1
@@ -2743,7 +2793,7 @@ $ docker inspect commit:v1 | jq ".[0].RootFS.Layers"
 
 > [연습] 실습용 `ubuntu` 이미지 제작하기
 
-`buildx ls`를 이용하여 현재 사용중인 `builder`가 지원하는 `platforms` 목록을 확인합니다. 
+`buildx ls`를 이용하여 현재 사용중인 `builder`가 지원하는 `platform` 목록을 확인합니다. 
 
 ```cmd
 $ NAME/NODE             DRIVER/ENDPOINT                STATUS  BUILDKIT             PLATFORMS
@@ -2774,13 +2824,19 @@ arch: arm/v7
 
 
 
+#### [실습] `buildx`를 이용하여 `Multi-platform` 이미지 제작하기
 
+1. `Docker Hub`에 로그인 합니다. 
+2. `docker-container`를 사용하는 `builder`를 생성합니다. 
+   - `--use` 옵션을 사용하여 바로 사용할 수 있도록 설정합니다. 
+3. 다음 조건을 만족하는 `Multi-platform` 이미지를 `build`합니다
+   - `--push`를 이용하여 `Docker Hub`로 업로드해야 합니다.
+   - 이미지는 `linux/amd64`, `arm/v6`를 지원해야 합니다. 
+4. `Docker Hub`에서 업로드한 이미지를 확인합니다. 
 
 
 
 ---
-
-
 
 ## 1.8. Docker Advance - Security
 
@@ -2818,7 +2874,7 @@ docker scout quickview [IMAGE|DIRECTORY|ARCHIVE]
 
 ### 연습 문제
 
-#### [연습] Commit을 이용하여 패키지가 설치된 이미지 생성하기
+#### [연습] 
 
 
 
@@ -2886,7 +2942,7 @@ on linux_amd64
 
   - 다음과 같이 환경 변수를 설정합니다. 
     ```tex
-    GITSYNC_REPO=https://github.com/matenduel/code_kata
+    GITSYNC_REPO=<REPO_URL>
     GITSYNC_ROOT=/code/git
     GITSYNC_REF=main
     GITSYNC_DEPTH=1
@@ -2915,31 +2971,46 @@ on linux_amd64
   terraform apply -var="aws_access_key=${AWS_ACCESS_KEY_ID}" -var="aws_secret_key=${AWS_SECRET_ACCESS_KEY}" -auto-approve
   ```
 
-- 
+- `AWS Console` 
 
 
 
-### [실습-3] TODO ARM 인스턴스에서 Application 실행하기
+### [실습-3] 실습용 이미지 제작하기
 
 - `driver`가 `docker-container`인 `builder`를 생성합니다. 
-- 다음 `Dockerfile`을 이용하여 `multi-platform`용 이미지를 생성하고 `ECR` 업로드합니다.
+- `cloudwave:base.v1`을 기반으로 `terraform`과 `awscli`를 설치하는 `Dockerfile`을 작성합니다. 
+  - `[실습-1]`을 참고하여 작성하면 됩니다. 
+
+- 위에서 생성한 `Dockerfile`을 이용하여 `multi-platform`용 이미지를 생성하고 `ECR` 업로드합니다.
   - 해당 이미지는 `linux/amd64`와 `linux/arm/v6`을 지원해야 합니다. 
-  - 이름은 
-- TODO 서버에 접속합니다. 
-- 컨테이너를 실행합니다. 
-  - 이미지는 ``를 사용합니다. 
-  - 
+  - 이미지의 이름은 `cloudwave:practice.v1`으로 설정합니다. 
 
 
 
-### [실습-4] TODO
+### [실습-4] EC2 인스턴스에서 컨테이너 실행하기
 
-- Web & DB
-  - EC2 환경
-  - Network를 이용하여 연결
-  - Volume을 이용하여 Source code 공유
-  - ENV는 command를 통해서 전달
-  - Web 접근을 위해 80포트 포워딩
+- `ssh`를 이용하여 `EC2`에 접속합니다. 
+
+```cmd
+$ ssh -i <PATH> <IP>
+```
+
+- `EC2`에 `Docker`를 설치합니다. 
+- `network`와 `volume`을 생성합니다.
+  - `network` 이름은 `aws_net`으로 설정합니다. 
+  - `driver`는 `bridge`로 설정합니다. 
+- `volume`을 생성합니다.
+  - `volume` 이름은 `pg_data`로 설정합니다. 
+- 다음 조건을 만족하는 `DB` 컨테이너를 실행합니다.
+  - 위에서 생성한 `aws_net`만 연결되어 있어야합니다.
+  - `volume`을 `/var/lib/postgresql/data`에 마운트합니다. 
+- 다음 조건을 만족하는 `PgAdmin` 컨테이너를 실행합니다. 
+  - `aws_net`와 `default` 네트워크가 연결되어 있어야합니다.
+  - 외부에서 접근할 수 있도록 `host`의 80 포트와 컨테이너의 80포트를 바인딩합니다. 
+  - `POSTGRES_PASSWORD` 환경 변수를 설정합니다.
+- `EC2`의 `IP`를 이용하여 `PgAdmin`에 접속합니다. 
+  - `http://IP:80`
+- `DB`를 연결합니다. 
 
 
 
@@ -2947,9 +3018,14 @@ on linux_amd64
 
 # Appendix
 
-## Terraform 실행하기
+## Terraform
 
-```
+```shell
+terraform init
+
+terraform plan
+
+terraform apply
 ```
 
 
@@ -2982,7 +3058,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 
 ## jq(JSON Parser) 설치
 
-### Windows Chocolatey
+### Windows (Chocolatey)
 
 ```cmd
 $ choco install jq
@@ -2995,61 +3071,6 @@ $ choco install jq
 ```cmd
 $ apt install jq
 ```
-
-
-
-
-
-# Tip
-
-종료된 모든 컨테이너 삭제하기 
-
-```cmd
-$ docker rm $(docker ps -a -q -f status=exited)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-> docker top
-
-```cmd
-minil@N100:~/repo$ docker top ngin
-UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
-root                36968               36947               0                   16:57               ?                   00:00:00            nginx: master process nginx -g daemon off;
-systemd+            37011               36968               0                   16:57               ?                   00:00:00            nginx: worker process
-systemd+            37012               36968               0                   16:57               ?                   00:00:00            nginx: worker process
-systemd+            37013               36968               0                   16:57               ?                   00:00:00            nginx: worker process
-systemd+            37014               36968               0                   16:57               ?                   00:00:00            nginx: worker process
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
