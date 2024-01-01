@@ -1589,8 +1589,6 @@ Login Succeeded
 
 업로드할 이미지의 `Tag`를 다음과 같이 설정합니다.
 
-> Host 정보는 `aws ecr describe-repositories` 명령어를 통해서 확인할 수 있습니다. 
-
 ```cmd
 $ docker tag cloudwave:base.v1 <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/cloudwave:base.v1
 ```
@@ -1735,7 +1733,7 @@ docker volume inspect [OPTIONS] VOLUME [VOLUME...]
 #### [예시] 볼륨 생성 일자 확인하기
 
 ```cmd
-$ docker volume inspect --format "{{ .CreatedAt }}" VOLUME_NAME
+$ docker volume inspect --format "{{ .CreatedAt }}" <VOLUME_NAME>
 2023-12-22T01:23:07Z
 ```
 
@@ -1812,7 +1810,7 @@ local     db_data
 그러므로, `db_data` 볼륨을 해당 디렉토리에 마운트합니다. 
 
 ```cmd
-$ docker run --rm -d --name db -v db_data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
+$ docker run --rm -d --name psql_db -v db_data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
 ```
 
 
@@ -1869,7 +1867,7 @@ CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 컨테이너를 재생성 합니다.
 
 ```cmd
-$ docker run --rm -d --name db -v db_data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
+$ docker run --rm -d --name psql_db -v db_data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=mysecretpassword postgres:16.1-bullseye
 ```
 
 
@@ -1877,7 +1875,7 @@ $ docker run --rm -d --name db -v db_data:/var/lib/postgresql/data -e POSTGRES_P
 컨테이너 내부에서 DB 테이블이 남아있는 것을 확인합니다. 
 
 ```cmd
-$ docker exec -it db2 /bin/bash
+$ docker exec -it psql_db /bin/bash
 root@3f19c9efb04b:/# psql -U postgres
 psql (16.1 (Debian 16.1-1.pgdg110+1))
 Type "help" for help.
@@ -2031,6 +2029,15 @@ Commands:
 ```sh
 docker network create [OPTIONS] NETWORK
 ```
+
+
+
+**주요 옵션**
+
+| Option     | Short | Default  | Description                                |
+| ---------- | ----- | -------- | ------------------------------------------ |
+| `--driver` | `-d`  | `bridge` | 네트워크에서 사용할 드라이버를 선언합니다. |
+| `--label`  |       |          | 네트워크의 라벨을 설정합니다.              |
 
 
 
@@ -2263,13 +2270,14 @@ bridge=172.17.0.3
 
 ![pgadmin_1](docker_practice.assets/pgadmin_1.PNG)
 
-- 좌측 상단 `Object > Register > Server`를 클릭합니다. 
+- `Servers`를 클릭한 다음, 좌측 상단 `Object > Register > Server`를 클릭합니다. 
 
 ![pgadmin_2](docker_practice.assets/pgadmin_2.PNG)
 
 
 
-- 접속할 `DB`서버 정보를 입력합니다. 
+- `General` 탭에서 `Name`을 기입합니다. 
+- `Connection` 탭에서 접속할 `DB`서버 정보를 입력합니다. 
   - host: `bridge` 네트워크에서 할당된 IP
   - Username: `postgres`
   - Password: 컨테이너 실행시 입력한 `POSTGRES_PASSWORD` 
@@ -2833,50 +2841,6 @@ arch: arm/v7
    - `--push`를 이용하여 `Docker Hub`로 업로드해야 합니다.
    - 이미지는 `linux/amd64`, `arm/v6`를 지원해야 합니다. 
 4. `Docker Hub`에서 업로드한 이미지를 확인합니다. 
-
-
-
----
-
-## 1.8. Docker Advance - Security
-
-### Docker Scout ?
-
-> https://docs.docker.com/engine/reference/commandline/scout/
-
-#### cves
-
-> https://docs.docker.com/engine/reference/commandline/scout_cves/
-
-```shell
-docker scout cves [OPTIONS] [IMAGE|DIRECTORY|ARCHIVE]
-```
-
-
-
-#### quickview
-
-> https://docs.docker.com/engine/reference/commandline/scout_quickview/
-
-```shell
-docker scout quickview [IMAGE|DIRECTORY|ARCHIVE]
-```
-
-
-
-
-
-### Docker Trust -> 간략하게
-
-> https://docs.docker.com/engine/reference/commandline/trust/
-
-
-
-### 연습 문제
-
-#### [연습] 
-
-
 
 
 

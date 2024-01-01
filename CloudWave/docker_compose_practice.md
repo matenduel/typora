@@ -1202,17 +1202,9 @@ $ docker compose down --volumes --remove-orphans
 
 ## 2.2. Compose file - Basic
 
-`docker-compose`를 위한 `configuration` 파일은 `YAML`을 이용하여 작성합니다. 
+- `docker-compose`를 위한 `configuration` 파일은 `YAML`을 이용하여 작성합니다. 
 
-
-
-`Python`과 같이 들여쓰기를 기반으로 구조를 결정합니다. 
-
-
-
-생성, 삭제, 업데이트 시 `config file`에 명시된 이름을 기반으로 움직입니다. 
-
--> network 이름을 수정후 down하는 경우 기존 네트워크 삭제 x
+- `Python`과 같이 들여쓰기를 기반으로 구조를 결정합니다. 
 
 
 
@@ -1283,35 +1275,33 @@ networks:
     name: "db"
 ```
 
+
+
 ### 2.2.1. Version
 
-The top-level `version` property is defined by the Compose Specification for backward compatibility. It is only informative.
+- `version`은 해당 `compose` 파일에서 사용한 버전을 의미합니다. 
 
-Compose doesn't use `version` to select an exact schema to validate the Compose file, but prefers the most recent schema when it's implemented.
-
-Compose validates whether it can fully parse the Compose file. If some fields are unknown, typically because the Compose file was written with fields defined by a newer version of the Specification, you'll receive a warning message. Compose offers options to ignore unknown fields (as defined by ["loose"](https://docs.docker.com/compose/compose-file/01-status/#requirements-and-optional-attributes) mode).
+- `version`을 선언하여도 `docker compose`는 해당 파일을 실행할 수 있는 가장 최신 버전을 사용합니다. 
 
 
 
 ### 2.2.2. Name
 
-프로젝트의 이름을 의미합니다. 
+- 프로젝트의 이름을 의미합니다. 
 
-프로젝트의 이름은 다음과 같은 순서로 결정됩니다. 
+- 프로젝트의 이름은 다음과 같은 순서로 결정됩니다. 
 
-1. `Compose CLI`의 `-p / --project-name`가 설정된 경우
-2. `configuration file(docker-compose.yaml)`에 `name`이 설정된 경우
-3. `directory` 이름
+    1. `Compose CLI`의 `-p / --project-name`가 설정된 경우
 
+    2. `configuration file(docker-compose.yaml)`에 `name`이 설정된 경우
 
-
-
+    3. `directory` 이름
 
 
 
 ### 2.2.3. Service
 
-> https://docs.docker.com/compose/compose-file/03-compose-file/
+> https://docs.docker.com/compose/compose-file/05-services/
 
 ```yaml
 # Example
@@ -1329,8 +1319,12 @@ services:
 
 #### image
 
-- 필수값
-- 
+```yaml
+image: string
+```
+
+- 컨테이너에서 사용할 이미지입니다. 
+- 이미지를 `build`하는 경우 생성된 이미지의 이름으로 사용됩니다. 
 
 
 
@@ -1344,14 +1338,19 @@ container_name: string
 - 알파벳 대소문자, 숫자 및 일부 특수기호(`.`, `_`, `-`)만 사용할 수 있습니다. 
 - `container_name`이 설정되어 있는 경우, 해당 서비스를 위한 컨테이너를 1개만 생성할 수 있습니다. 
 
+
+
 #### expose
 
 ```yaml
 expose:
-	- INT_OR_STRING
+	- 80  # INT
+	- "8080" # STRING
+	- "1000-1010" # RANGE
 ```
 
-- `expose` defines the ports that Compose exposes from the container. These ports must be accessible to linked services and should not be published to the host machine. Only the internal container ports can be specified.
+- 같은 네트워크를 사용하는 서비스에서만 접근 가능하며, `host`로 `publish`되지 않습니다. 
+- `-`를 이용하여 노출할 포트 범위를 지정할 수 있습니다. 
 
 
 
@@ -1368,15 +1367,12 @@ ports:
     protocol: tcp
 ```
 
-
-
-- `HOST` is `[IP:](port | range)`
-- `CONTAINER` is `port | range`
-- `PROTOCOL` to restrict port to specified protocol. `tcp` and `udp` values are defined by the Specification, Compose offers support for platform-specific protocol names.
+- 외부에서 접근할 수 있도록 `host`로 `publish`할 포트를 정의합니다. 
+- `-`를 이용하여 노출할 포트 범위를 지정할 수 있습니다. 
 
 
 
-#### entrypoints
+#### entrypoint
 
 ```yaml
 # String
@@ -1387,11 +1383,8 @@ entrypoint:
 	- STRING
 ```
 
-`entrypoint` declares the default entrypoint for the service container. This overrides the `ENTRYPOINT` instruction from the service's Dockerfile.
-
-If `entrypoint` is non-null, Compose ignores any default command from the image, for example the `CMD` instruction in the Dockerfile.
-
-See also [`command`](https://docs.docker.com/compose/compose-file/05-services/#command) to set or override the default command to be executed by the entrypoint process.
+- 컨테이너의 `Dockerfile`에서 정의된 `ENTRYPOINT`를 `override`합니다.
+- `ENTRYPOINT`가 선언된 경우, `Dockerfile`에서 정의된 `CMD`는 무시됩니다. 
 
 
 
@@ -1408,69 +1401,49 @@ command:
 	- STRING
 ```
 
-
-
-`command` overrides the default command declared by the container image, for example by Dockerfile's `CMD`.
-
-If the value is `null`, the default command from the image is used.
-
-If the value is `[]` (empty list) or `''` (empty string), the default command declared by the image is ignored, i.e. overridden to be empty.
+- 컨테이너의 `Dockerfile`에서 정의된 `CMD`를 `override`합니다.
+- 값이 `null`인 경우 `Image`의 `command`가 사용되지만, `[]` 또는 `''`로 설정된 경우  `Image`의 `command`는 무시됩니다. 
 
 
 
 #### environment
 
-`environment` defines environment variables set in the container. `environment` can use either an array or a map. Any boolean values; true, false, yes, no, should be enclosed in quotes to ensure they are not converted to True or False by the YAML parser.
-
-Environment variables can be declared by a single key (no value to equals sign). In this case Compose relies on you to resolve the value. If the value is not resolved, the variable is unset and is removed from the service container environment.
-
-Map syntax:
-
-content_copy
-
-```yml
+```yaml
+# Map Syntax
 environment:
-  RACK_ENV: development
-  SHOW: "true"
-  USER_INPUT:
+  KEY1: value
+  KEY2: "value"
+  KEY3:
+  
+# Array Syntax
+environment:
+  - KEY1=value
+  - KEY2="value"
+  - KEY3
 ```
 
-Array syntax:
-
-```yml
-environment:
-  - RACK_ENV=development
-  - SHOW=true
-  - USER_INPUT
-```
-
-When both `env_file` and `environment` are set for a service, values set by `environment` have precedence.
+- `Map` 또는 `Array`형식으로 작성할 수 있습니다. 
+- 값이 정의되지 않은 경우, `env_file`등으로 제공되지 않으면 `unset` 됩니다. 
+- 동일한 변수가 `env_file`에도 선언되어 있는 경우, `environment`의 값이 설정됩니다. 
 
 
 
 #### env_file
 
-`env_file` adds environment variables to the container based on the file content.
+```yaml
+# Single
+env_file: .env  # string
 
-```yml
-env_file: .env
-```
-
-`env_file` can also be a list. The files in the list are processed from the top down. For the same variable specified in two env files, the value from the last file in the list stands.
-
-```yml
+# Multiple
 env_file:
   - ./a.env
   - ./b.env
 ```
 
-Relative path are resolved from the Compose file's parent folder. As absolute paths prevent the Compose file from being portable, Compose warns you when such a path is used to set `env_file`.
-
-Environment variables declared in the [environment](https://docs.docker.com/compose/compose-file/05-services/#environment) section override these values. This holds true even if those values are empty or undefined.
-
-
-
-Each line in an `.env` file must be in `VAR[=[VAL]]` format. The following syntax rules apply:
+- 기본적으로 `.env` 파일이 사용됩니다. 
+- 여러개의 파일에 동일한 변수가 선언된 경우, 가장 마지막 파일에 있는 값으로 설정됩니다. 
+- `env_file`은 다음과 같은 양식으로 작성합니다. 
+    - `VAR[=[VAL]]`
 
 
 
@@ -1478,108 +1451,96 @@ Each line in an `.env` file must be in `VAR[=[VAL]]` format. The following synta
 
 > https://docs.docker.com/compose/compose-file/build/
 
+```yaml
+services:
+	# Short
+  frontend:
+    image: example/webapp
+    build: ./webapp
+	
+	# Long - dockerfile
+  backend:
+    image: example/database
+    build:
+      context: backend
+      dockerfile: ../backend.Dockerfile
+      args:
+        GIT_COMMIT: cdc3b19
+```
 
+- 서비스의 컨테이너를 `build`할 때 사용하며, 각 서비스별로 `context` 경로를 설정할 수 있습니다. 
+- `dockerfile` 대신 `dockerfile_inline`을 이용하여 사용할 수도 있습니다. 
+
+```yaml
+build:
+  context: .
+  dockerfile_inline: |
+    FROM baseimage
+    RUN some command    
+```
 
 
 
 #### pull_policy
 
-`pull_policy` defines the decisions Compose makes when it starts to pull images. Possible values are:
+```yaml
+pull_policy: string
+```
 
-- `always`: Compose always pulls the image from the registry.
-- `never`: Compose doesn't pull the image from a registry and relies on the platform cached image. If there is no cached image, a failure is reported.
-- `missing`: Compose pulls the image only if it's not available in the platform cache. This is the default option if you are not also using the [Compose Build Specification](https://docs.docker.com/compose/compose-file/build/). `if_not_present` is considered an alias for this value for backward compatibility.
-- `build`: Compose builds the image. Compose rebuilds the image if it's already present.
+- `Compose`가 이미지를 어떻게 가져올 것인지를 설정합니다. 
+- 사용할 수 있는 값은 다음과 같습니다. 
 
-If `pull_policy` and `build` are both present, Compose builds the image by default. This behavior may be overridden in the toolchain, depending on the implementation.
+| Value     | Description                                                  |
+| --------- | ------------------------------------------------------------ |
+| `always`  | 매번 `registry`에서 이미지를 다운로드 합니다.                |
+| `never`   | 저장된 이미지만을 사용합니다. 이미지가 존재하지 않는 경우 실행되지 않습니다. |
+| `missing` | 저장된 이미지가 없는 경우에만 `registry`에서 다운로드 합니다. |
+| `build`   | 매번 이미지를 `build`합니다.                                 |
+
+
 
 #### restart
 
-`restart` defines the policy that the platform applies on container termination.
-
-- `no`: The default restart policy. It does not restart the container under any circumstances.
-- `always`: The policy always restarts the container until its removal.
-- `on-failure`: The policy restarts the container if the exit code indicates an error.
-- `unless-stopped`: The policy restarts the container irrespective of the exit code but stops restarting when the service is stopped or removed.
-
-```yml
-    restart: "no"
-    restart: always
-    restart: on-failure
-    restart: unless-stopped
+```yaml
+restart: string
 ```
+
+- 컨테이너가 종료된 경우 어떻게 처리할 것인지를 정의합니다. 
+- 사용할 수 있는 값은 다음과 같습니다.
+
+| Value            | Description                                              |
+| ---------------- | -------------------------------------------------------- |
+| `no`             | 어떠한 경우에도 컨테이너를 재실행하지 않습니다.          |
+| `always`         | 제거되지 않는 한, 컨테이너를 항상 재실행합니다.          |
+| `on-failure`     | `exit code`가 `error`인 경우에만 재실행합니다.           |
+| `unless-stopped` | `종료`또는 `삭제`하는 경우를 제외하고 항상 재실행합니다. |
 
 
 
 #### platform
 
-`platform` defines the target platform the containers for the service run on. It uses the `os[/arch[/variant]]` syntax.
+```yaml
+platform: string
 
-The values of `os`, `arch`, and `variant` must conform to the convention used by the [OCI Image Specopen_in_new](https://github.com/opencontainers/image-spec/blob/v1.0.2/image-index.md).
-
-Compose uses this attribute to determine which version of the image is pulled and/or on which platform the service’s build is performed.
-
-```yml
-platform: darwin
+# Example
 platform: windows/amd64
 platform: linux/arm64/v8
 ```
 
-
-
-#### health check 
-
-`healthcheck` declares a check that's run to determine whether or not the service containers are "healthy". It works in the same way, and has the same default values, as the [HEALTHCHECK Dockerfile instructionopen_in_new](https://docs.docker.com/engine/reference/builder/#healthcheck) set by the service's Docker image. Your Compose file can override the values set in the Dockerfile.
-
-```yml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost"]
-  interval: 1m30s
-  timeout: 10s
-  retries: 3
-  start_period: 40s
-  start_interval: 5s
-```
-
-`interval`, `timeout`, `start_period`, and `start_interval` are [specified as durations](https://docs.docker.com/compose/compose-file/11-extension/#specifying-durations).
-
-`test` defines the command Compose runs to check container health. It can be either a string or a list. If it's a list, the first item must be either `NONE`, `CMD` or `CMD-SHELL`. If it's a string, it's equivalent to specifying `CMD-SHELL` followed by that string.
-
-```yml
-# Hit the local web app
-test: ["CMD", "curl", "-f", "http://localhost"]
-```
-
-Using `CMD-SHELL` runs the command configured as a string using the container's default shell (`/bin/sh` for Linux). Both forms below are equivalent:
-
-```yml
-test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
-test: curl -f https://localhost || exit 1
-```
-
-`NONE` disables the healthcheck, and is mostly useful to disable the Healthcheck Dockerfile instruction set by the service's Docker image. Alternatively, the healthcheck set by the image can be disabled by setting `disable: true`:
-
-```yml
-healthcheck:
-  disable: true
-```
+- 컨테이너의 `platform`을 명시합니다. 
 
 
 
 #### CLI option <-> Service elements
 
-|      | CLI Options | Service Elements |
-| ---- | ----------- | ---------------- |
-|      | -i          | stdin_open       |
-|      | -t          |                  |
-|      | -p          |                  |
-|      | -e          |                  |
-|      | --env-files |                  |
-|      | --name      | container_name   |
-
-
-
-
+| Docker CLI Options | Service Elements |
+| ------------------ | ---------------- |
+| -i                 | stdin_open       |
+| -t                 | tty              |
+| -p                 | ports            |
+| -e                 | environment      |
+| --env-files        | env_file         |
+| --name             | container_name   |
 
 
 
@@ -1589,9 +1550,8 @@ healthcheck:
 
 아래에 있는 `docker-compose.yaml` 파일을 이용하여 프로젝트를 실행할 경우, `ubuntu` 서비스가 생성 후 바로 종료되는 것을 확인할 수 있습니다. 
 
-`docker-compose.yaml`
-
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 
 services:
@@ -1735,7 +1695,7 @@ example3-ubuntu-1 exited with code 0
 
 
 
-##### [연습] `command`에서 컨테이너 환경변수 사용하
+##### [연습] `command`에서 컨테이너 환경변수 사용하기
 
 `docker-compose.yaml` 파일에서 `$`를 이용하여 환경변수를 사용하는 경우,  컨테이너 내부의 환경변수가 사용되지 않습니다. 
 
@@ -1813,29 +1773,6 @@ $ docker compose -f example_1.yaml -p ex1 up -d --build
 
 
 
-##### TODO [연습] health check
-
-```yaml
-services:
-  numbers-api:
-    image: diamol/ch08-numbers-api:v3
-    ports:
-      - "8087:80"
-    healthcheck:
-      interval: 5s
-      timeout: 1s
-      retries: 2
-      start_period: 5s
-    networks:
-      - app-net
-```
-
-CASE
-
-- Health check 설정하여 체크
-- timeout 유도하여 체크
-- start_period 유도하여 체크
-
 
 
 
@@ -1872,64 +1809,100 @@ volumes:
 
 #### 볼륨 정의하기
 
-`volume`은 다음 5가지 속성값을 통해 정의합니다. 
+```yaml
+volumes:
+  db-data:  # volume_key
+    name: "db-volume"
+    external: true
+    labels:
+      com.example.description: "Database volume"
+```
 
-1. name
-2. external
-3. labels
-4. driver
-5. driver_opts
+
+
+##### Name
+
+- 볼륨의 이름입니다. 
+- 설정되지 않은 경우 `{project_name}_{volume_key}` 형태의 이름으로 명명됩니다.
+
+
+
+##### External
+
+- 생성되어 있는 기존 볼륨의 사용 여부입니다. 
+- 해당 볼륨이 생성되어 있지 않은 경우, 프로젝트가 실행되지 않습니다. 
+- `name`이 지정되어 있지 않은 경우, `volumes`에 정의된 `key`가 사용됩니다. 
+    - `db-volume`이 명시되지 않았다면, `db_data`란 이름을 가진 `volume`을 탐색합니다. 
+
+
+
+##### Labels
+
+- 관리를 위한 라벨을 설정합니다. 
 
 
 
 **주의 사항**
 
-- `volume`을 정의하였더라도 service에서 사용하지 않았다면 생성되지 않습니다. 
+- `volume`을 정의하였더라도 `service`에서 사용하지 않는 경우, 생성되지 않습니다. 
 
 
 
 #### 볼륨 사용하기
 
-정의된 볼륨은 서비스의 `volumes`에서 사용할 수 있습니다. 
+```yaml
+services:
+  backend:
+    image: example/database
+    volumes:
+      - db-data:/etc/data
 
-두 가지 방식으로 사용할 volumes를 작성할 수 있습니다. long / short
+  backup:
+    image: backup-service
+    volumes:
+      - type: volume
+        source: mydata
+        target: /data
+        volume:
+          nocopy: true
+        read_only: true
+      - db-data:/var/lib/backup/data:rw
+```
+
+- 정의된 볼륨은 서비스의 `volumes`에서 사용할 수 있습니다. 
+
+- `Short Syntax`, `Long Syntax` 두 가지 방식으로 서비스의 `volumes`를 작성할 수 있습니다.
 
 
 
 ##### Short Syntax
 
-short는 `docker run`에서 사용하던 방식과 동일합니다. 
+```tex
+volumes:
+	- VOLUME:CONTAINER_PATH:ACCESS_MODE
+```
 
-The short syntax uses a single string with colon-separated values to specify a volume mount (`VOLUME:CONTAINER_PATH`), or an access mode (`VOLUME:CONTAINER_PATH:ACCESS_MODE`).
-
-- `VOLUME`: Can be either a host path on the platform hosting containers (bind mount) or a volume name.
-
-- `CONTAINER_PATH`: The path in the container where the volume is mounted.
-
-- ```
-    ACCESS_MODE
-    ```
-
-    : A comma-separated
-
-     
-
-    ```
-    ,
-    ```
-
-     
-
-    list of options:
-
-    - `rw`: Read and write access. This is the default if none is specified.
-    - `ro`: Read-only access.
-    - `z`: SELinux option indicating that the bind mount host content is shared among multiple containers.
-    - `Z`: SELinux option indicating that the bind mount host content is private and unshared for other containers.
+| Attributes       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `VOLUME`         | `host`의 경로 또는 `volume` 이름을 사용합니다. <br />`volume` 이름을 사용하는 경우 경로를 지정할 수 없습니다. |
+| `CONTAINER_PATH` | 볼륨이 마운트될 컨테이너의 경로를 의미합니다.                |
+| `ACCESS_MODE`    | 해당 볼륨의 `Access mode`를 설정합니다. <br />- `rw`: 읽기&쓰기 모두 가능합니다.<br />- `ro`: 읽기 전용으로 설정합니다. |
 
 
 
 ##### Long Syntax
+
+```yaml
+volumes:
+  - type: volume
+    source: mydata
+    target: /data
+    volume:
+      nocopy: true
+    read_only: true
+```
+
+TODO
 
 `long syntax` 방식은 short보다 더 많은 속성을 제어할 수 있습니다. 
 
@@ -1978,12 +1951,16 @@ The short syntax uses a single string with colon-separated values to specify a v
 
 ##### [연습] External volume 사용하기
 
+다음과 같이 `volume`을 생성합니다.
+
 ```cmd
 $ docker volume create vault
 vault
 ```
 
 
+
+`volume`을 `ubuntu` 컨테이너의 `/root/vault`에 마운트하도록 `docker-compose.yaml`을 작성합니다.
 
 ```yaml
 version: '3.8'
@@ -2005,15 +1982,14 @@ volumes:
     name: 'vault'
 ```
 
-TODO nocopy 추가
-
-
-
 
 
 ##### [연습] read_only 로 설정하여 사용하기
 
+다음 `docker-compose.yaml`을 이용하여 프로젝트를 실행합니다. 
+
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'volume-external'
 
@@ -2042,29 +2018,32 @@ volumes:
     name: 'vault'
 ```
 
-
-
 ```cmd
-$ docker compose -f example2/docker-compose.yaml up -d
-[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+$ docker compose -f docker-compose.yaml up -d
+[+] Building 0.0s (0/0)                                                      docker:desktop-linux
 [+] Running 2/2
- ✔ Container volume-external-master-1  Started                                                                                                                                                                                     0.0s 
- ✔ Container volume-external-slave-1   Started                                                                                                                                                                                     0.0s 
-
+ ✔ Container volume-external-master-1  Started                                              0.0s 
+ ✔ Container volume-external-slave-1   Started                                              0.0s 
 ```
 
 
 
-
+다음과 같이 `exec`를 이용하여 `master` 서비스의 컨테이너에서 `/root/vault`에 파일을 생성합니다. 
 
 ```cmd
 $ docker exec volume-external-master-1 /bin/bash -c "echo master > /root/vault/temp.txt"
+```
 
+생성한 파일이 정상적으로 읽어지는지 다음과 같이 확인해볼 수 있습니다. 
+
+```cmd
 $ docker exec volume-external-master-1 /bin/bash -c "cat /root/vault/temp.txt"        
 master
 ```
 
 
+
+`slave` 서비스의 컨테이너에서는 `/root/vault`에 저장한 파일을 읽을 수 있지만, 파일을 기록하는 것은 불가능한 것을 확인할 수 있습니다.
 
 ```cmd
 $ docker exec volume-external-slave-1 /bin/bash -c "cat /root/vault/temp.txt"         
@@ -2075,19 +2054,16 @@ $ docker exec volume-external-slave-1 /bin/bash -c "echo slave > /root/vault/tem
 
 
 
-
-
-
-
-
-
-##### [연습] volumes_from
+##### [연습] `volumes_from`을 이용하여 `volume` 사용하기
 
 > https://docs.docker.com/compose/compose-file/05-services/#volumes
 
+다음 파일을 이용하여 새로운 프로젝트를 실행합니다. 
 
+- 위에서 생성한 `volume-external` 프로젝트는 실행중이어야 합니다.
 
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'volume-external2'
 
@@ -2100,37 +2076,28 @@ services:
       - sleep infinity
     volumes_from:
       - container:volume-external-slave-1:ro
-
 ```
 
 
 
 ```cmd
- ~/repo/typora/CloudWave/code/compose  main +13 !12 ?3                                                                                                                                                                                 
-> docker compose -f example2/docker-compose2.yaml up -d                       
-[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+$ docker compose -f docker-compose.yaml up -d                       
+[+] Building 0.0s (0/0)                                                       docker:desktop-linux
 [+] Running 2/2
- ✔ Network volume-external2_default    Created                                                                                                                                                                                     0.1s 
- ✔ Container volume-external2-other-1  Started                                                                                                                                                                                     0.0s 
-
- ~/repo/typora/CloudWave/code/compose  main +13 !12 ?3                                                                                                                                                                                 
-> docker exec volume-external2-other-1 /bin/bash -c "cat /root/vault/temp.txt"
-master
-
+ ✔ Network volume-external2_default    Created                                                0.1s 
+ ✔ Container volume-external2-other-1  Started                                                0.0s 
 ```
 
 
 
+별도의 `volumes`를 정의하지 않고도 `volumes_from`을 이용하여 다른 서비스의 `volume`을 사용할 수 있는것을 확인할 수 있습니다. 
 
-
-#### [실습] `git-sync`를 이용하여 `FastAPI` 서버 실행하기
-
-조건 
-
-- `git-sync`는 rw
-- `FastAPI`는 ro
-- 디렉토리 지정
-- 
+```cmd
+$ docker exec volume-external2-other-1 /bin/bash -c "cat /root/vault/temp.txt"
+master
+$ docker exec volume-externa2-other-1 /bin/bash -c "echo other > /root/vault/temp.txt"
+/bin/bash: line 1: /root/vault/temp.txt: Read-only file system
+```
 
 
 
@@ -2141,29 +2108,56 @@ services:
   frontend:
     image: example/webapp
     networks:
-      - front-tier
-      - back-tier
+      - private
 
 networks:
-  front-tier:
-  back-tier:
+  private:
+    name: "private_net"
+    external: true
+    labels:
+      com.example.description: "private network"
 ```
 
 
 
-Attributes
-
-- external
-- internal
-- labels
-- name
-- driver
-
-
-
-
-
 #### 네트워크 정의하기
+
+```yaml
+networks:
+  private:  # network_key
+    name: "private_net"
+    external: true
+    labels:
+      com.example.description: "private network"
+```
+
+
+
+##### Name
+
+- 네트워크의 이름입니다. 
+- 설정되지 않은 경우 `{project_name}_{network_key}` 형태의 이름으로 명명됩니다.
+
+
+
+##### External
+
+- 생성되어 있는 기존 네트워크 사용 여부입니다. 
+- 해당 네트워크가 생성되어 있지 않은 경우, 프로젝트가 실행되지 않습니다. 
+- `name`이 지정되어 있지 않은 경우, `networks`에 정의된 `key`가 사용됩니다. 
+    - `private_net`이 명시되지 않았다면, `private`란 이름을 가진 `network`를 탐색합니다. 
+
+
+
+##### Labels
+
+- 관리를 위한 라벨을 설정합니다. 
+
+
+
+**주의 사항**
+
+- `network`를 정의하였더라도 `service`에서 사용하지 않는 경우, 생성되지 않습니다. 
 
 
 
@@ -2171,23 +2165,46 @@ Attributes
 
 #### 네트워크 사용하기
 
+```yaml
+services:
+  backend:
+    image: example/database
+    # List Syntax
+    networks:
+      - private
 
+  backup:
+    image: backup-service
+    # Map Syntax
+    networks:
+      private:
+        aliases:
+          - alias1
+          
+  bastion:
+    image: bastion
+    network_mode: host
+```
+
+- 정의된 볼륨은 서비스의 `networks`에서 사용할 수 있습니다. 
+- `host` 또는 `none` 네트워크를 사용하려는 경우, `network_mode`를 이용하여 설정합니다.
+
+
+
+**주의사항**
+
+- 1개 이상의 컨테이너에서 동일한 `Alias`를 사용할 경우, 응답할 컨테이너를 특정지을 수 없습니다.
 
 
 
 #### 연습 문제 
 
-##### TODO [연습] `host`네트워크 사용하기 
+##### [연습] `host` 네트워크를 사용하는 컨테이너 만들기 
 
-```cmd
-$ docker network ls -f driver=host
-NETWORK ID     NAME      DRIVER    SCOPE
-b107e82764b5   host      host      local
-```
-
-
+`docker-compose.yaml`을 이용하여 `host`를 사용하는 컨테이너를 실행합니다. 
 
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'network-host'
 
@@ -2198,39 +2215,68 @@ services:
     command:
       - -c
       - sleep infinity
-    networks:
-      host:
-
-networks:
-  host:
-    name: "host"
-    external: true
+    network_mode: host
 ```
-
-
 
 ```cmd
 $  docker compose up -d
-[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Building 0.0s (0/0)                                                      docker:desktop-linux
 [+] Running 1/0
- ✔ Container network-host-ubuntu-1  Created                                                                                                                                                                                        0.0s 
-Error response from daemon: network-scoped alias is supported only for containers in user defined networks
-```
-
--> 에러 있는 듯
-
-```yaml
+ ✔ Container network-host-ubuntu-1  Created                                                  0.0s 
 ```
 
 
 
+테스트를 위해서 다음과 같이 `nginx` 컨테이너를 실행합니다. 
+
+```cmd
+$ docker run -d -p 80:80 --name nginx nginx:latest 
+```
 
 
 
+`ubuntu` 컨테이너에 `curl`을 설치합니다. 
+
+```cmd
+$ docker exec network-host-ubuntu-1 /bin/bash -c "apt-get update && apt-get upgrade && apt-get install -y curl"
+```
+
+
+
+다음과 같이 컨테이너 내부에서 `localhost:80`으로 `nginx` 응답이 오는 것을 확인합니다. 
+
+```cmd
+$ docker exec network-host-ubuntu-1 /bin/bash -c "curl localhost:80"
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+```
 
 
 
 ##### [연습] 이미 생성된 네트워크 사용하기
+
+`bridge` 드라이버를 사용하는 네트워크를 생성합니다. 
 
 ```cmd
 $ docker network create private -d bridge
@@ -2243,9 +2289,42 @@ NETWORK ID     NAME                    DRIVER    SCOPE
 
 
 
-
+다음 `compose`파일을 이용하여 `private` 네트워크를 사용하는 프로젝트를 실행합니다. 
 
 ```yaml
+# docker-compose.yaml
+version: '3.8'
+name: 'network-external'
+
+services:
+  ubuntu:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private:
+
+networks:
+  private:
+  	name: "private"
+    external: true
+```
+
+```cmd
+$ docker compose up -d                                                                             
+[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
+[+] Running 1/1
+ ✔ Container network-external-ubuntu-1  Started   
+```
+
+
+
+다음과 같이 `name`을 제거하여도 프로젝트가 정상적으로 실행됩니다. 
+
+```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'network-external'
 
@@ -2264,8 +2343,6 @@ networks:
     external: true
 ```
 
-
-
 ```cmd
 $ docker compose up -d                                                                             
 [+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
@@ -2274,6 +2351,8 @@ $ docker compose up -d
 ```
 
 
+
+하지만, `name`을 `my-private`로 변경하면 다음과 같이 프로젝트가 실행되지 않는 것을 확인할 수 있습니다. 
 
 ```yaml
 version: '3.8'
@@ -2295,8 +2374,6 @@ networks:
     external: true
 ```
 
-
-
 ```cmd
 $ docker compose up -d
 [+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
@@ -2307,11 +2384,12 @@ network my-private declared as external, but could not be found
 
 
 
+##### [연습] `alias` 설정하기
 
-
-##### [연습] alias 설정하기
+다음 `docker-compose.yaml`을 이용하여 프로젝트를 생성합니다. 
 
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'network-alias'
 
@@ -2331,6 +2409,12 @@ networks:
 
 
 
+`inspect`를 이용하여 컨테이너에 설정된 `alias`를 확인하면 다음과 같이 3개가 표기되는 것을 확인할 수 있습니다. 
+
+- 컨테이너 이름
+- 서비스 이름
+- 컨테이너 ID
+
 ```cmd
 $ docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | jq -r '.[].Aliases' 
 [
@@ -2342,7 +2426,7 @@ $ docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | j
 
 
 
-
+다음과 같이 `docker-compose.yaml`에  `alias`를 추가하여 업데이트 해줍니다. 
 
 ```yaml
 version: '3.8'
@@ -2364,7 +2448,13 @@ networks:
   private:
 ```
 
+```cmd
+$ docker compose up -d
+```
 
+
+
+그러면 다음과 같이 기존에 있던 `alias`에 추가로 설정한 `server`가 추가된 것을 확인해볼 수 있습니다. 
 
 ```cmd
 $  docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | jq -r '.[].Aliases' 
@@ -2378,13 +2468,7 @@ $  docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | 
 
 
 
-
-
-
-
-#### [실습] 생성된 `network`를 이용하여 서로 다른 프로젝트의 서비스 연결하기
-
-조건
+#### [실습] 생성된 `network`를 이용하여 서로 다른 프로젝트의 서비스와 연결하기
 
 - `across_project` 네트워크를 생성하세요.
 - `network-across-project-1` 프로젝트를 생성하세요
@@ -2396,103 +2480,18 @@ $  docker inspect network-alias-ubuntu-1 | jq ".[0].NetworkSettings.Networks" | 
     - `80` 포트를 `expose`
     - `across_project`네트워크의 alias를 `web`으로 설정하세요
 - `docker network inspect`를 이용하여 각 서비스의 IP를 확인하세요
+
+```cmd
+$ docker network inspect across_project | jq '.[].Containers'
+```
+
 - `ubuntu`서버에서 curl을 이용하여 `web`을 호출하세요
     - IP
     - DNS(alias)
 
 
 
-```cmd
-$ docker network create across_project
-24ca828a4c797fb8a6f13d125af6493e0ba5871c5ac1b94a6bdaf687aa1620cc
-
-```
-
-
-
-
-
-```yaml
-version: '3.8'
-name: 'network-across-project-1'
-
-services:
-  ubuntu:
-    image: ubuntu:22.04
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - sleep infinity
-    networks:
-      private: {}
-
-networks:
-  private:
-    name: "across_project"
-    external: true
----
-version: '3.8'
-name: 'network-across-project-2'
-
-services:
-  ubuntu:
-    image: ubuntu:22.04
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - sleep infinity
-    networks:
-      private: {}
-
-networks:
-  private:
-    name: "across_project"
-    external: true
-```
-
-
-
-```cmd
-$ docker compose -f project-1.yaml up -d
-[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
-[+] Running 1/1
- ✔ Container network-across-project-1-ubuntu-1  Started      
- 
-$ docker compose -f project-2.yaml up -d
-[+] Building 0.0s (0/0)                                                                                                                                                                                            docker:desktop-linux
-[+] Running 1/1
- ✔ Container network-across-project-2-ubuntu-1  Started            
-```
-
-
-
-```cmd
-$  docker network inspect across_project | jq '.[].Containers'
-{
-  "29e55aa6d000ec061e25b5f1d1dccd176e44a49b76cacc57cd8d0b2c8c8e5c76": {
-    "Name": "network-across-project-2-ubuntu-1",
-    "EndpointID": "a816b9271bc9e9c379d139e88dfb50acc9dd5af18e0fbcee500006321eaa9324",
-    "MacAddress": "02:42:ac:1b:00:03",
-    "IPv4Address": "172.27.0.3/16",
-    "IPv6Address": ""
-  },
-  "2e4086cf6fa0378e330992491d2cf50a08108fdd730034b4a5ee82b697ae7bdb": {
-    "Name": "network-across-project-1-ubuntu-1",
-    "EndpointID": "2ce7ba6805c0839b91c16f4b2a363935b830aba544546b71f91d7bce7c8709dc",
-    "MacAddress": "02:42:ac:1b:00:02",
-    "IPv4Address": "172.27.0.2/16",
-    "IPv6Address": ""
-  }
-}
-```
-
-
-
-
-
-
-
-### config & secret
+### 2.2.6 config & secret
 
 ```yaml
 services:
@@ -2616,14 +2615,10 @@ drwxr-xr-x 1 root root 4096 Dec 28 07:58 ..
 
 
 
-## Compose file - Advance
+## 2.3. Compose file - Advance
 
+### 2.3.1. anchor & Alias
 
-
-#### anchor & Alias
-
-> https://medium.com/@kinghuang/docker-compose-anchors-aliases-extensions-a1e4105d70bd
->
 > https://docs.docker.com/compose/compose-file/11-extension/
 
 ```yaml
@@ -2638,6 +2633,8 @@ x-common:
     &default-env
     BY: "x-common"
 
+x-value: &v1 x
+
 services:
   ubuntu:
     <<: *common
@@ -2645,25 +2642,70 @@ services:
     environment:
       <<: *default-env
       FROM: "env definition"
+      X: *v1
     entrypoint: /bin/bash
     command:
       - -c
-      - echo 'env from ${FROM}' && echo env from $${FROM}
+      - echo 'env from ${FROM}' && echo env from $${BY}
     restart: no
 
 volumes:
   source:
 ```
 
-##### `x-` prefix
+- `Anchor & Alias`를 이용하여 반복적으로 사용되는 요소들을 모듈화하여 사용할 수 있습니다. 
+- 재사용을 위한 모듈은 `x-`를 `prefix`로 사용하여야 합니다. 
+-  `<<:`를 사용하면 `yaml`을 병합하는 형태로 사용하게 됩니다. 
 
 
 
-##### `<<:` 의미 
+#### [예시] `Anchor & Alias`를 이용한 `YAML` 파일 확인하기
+
+위에 있는 `docker-compose.yaml`를 대상으로 `docker compose config`를 사용하면 다음과 같이 `Anchor & Alias`가 반영된 `YAML`을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose config
+WARN[0000] The "FROM" variable is not set. Defaulting to a blank string. 
+name: compose
+services:
+  ubuntu:
+    command:
+      - -c
+      - echo 'env from ' && echo env from $${BY} && echo env from alias $${X}
+    entrypoint:
+      - /bin/bash
+    environment:
+      BY: x-common
+      FROM: env definition
+      X: x
+    image: ubuntu:22.04
+    networks:
+      default: null
+    restart: "no"
+    volumes:
+      - type: volume
+        source: source
+        target: /code
+        volume: {}
+networks:
+  default:
+    name: compose_default
+volumes:
+  source:
+    name: compose_source
+x-common:
+  environment:
+    BY: x-common
+  restart: always
+  volumes:
+    - source:/code
+x-value: x
+
+```
 
 
 
-#### profile
+### 2.3.2. profile
 
 > https://docs.docker.com/compose/profiles/
 >
@@ -2691,9 +2733,11 @@ services:
 
 
 
+#### [예시] `profile`을 이용하여 일부 서비스만 실행하기
 
 
-#### deploy
+
+### 2.3.3. deploy
 
 > https://docs.docker.com/compose/compose-file/deploy/
 
@@ -2720,11 +2764,113 @@ deploy:
 
 
 
+#### [예시] 서비스를 컨테이너 3개로 구성하기
+
+다음 `docker-compose.yaml`을 이용하여 프로젝트를 실행합니다.
+
+```yaml
+# docker-compose.yaml
+name: deploy-replica
+services:
+  web:
+    image: nginx:latest
+    expose:
+      - 80
+    deploy:
+      replicas: 3
+```
+
+```cmd
+$ docker compose up -d
+[+] Building 0.0s (0/0)                                                                                      docker:desktop-linux
+[+] Running 3/3
+ ✔ Container deploy-replica-web-3  Started                                                                                   0.1s 
+ ✔ Container deploy-replica-web-2  Started                                                                                   0.1s 
+ ✔ Container deploy-replica-web-1  Started                                                                                   0.1s 
+```
+
+
+
+다음과 같이 `web` 서비스가  `nginx` 컨테이너 3개로 구성되어진 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose -p deploy-replica ps
+NAME                   IMAGE          COMMAND                   SERVICE   CREATED          STATUS          PORTS
+deploy-replica-web-1   nginx:latest   "/docker-entrypoint.…"   web       47 seconds ago   Up 46 seconds   80/tcp
+deploy-replica-web-2   nginx:latest   "/docker-entrypoint.…"   web       47 seconds ago   Up 46 seconds   80/tcp
+deploy-replica-web-3   nginx:latest   "/docker-entrypoint.…"   web       47 seconds ago   Up 46 seconds   80/tcp
+```
+
+
+
+하지만, 다음과 같이 `container_name`을 설정하게되면 실행시 에러가 발생하는 것을 확인할 수 있습니다. 
+
+```yaml
+# docker-compose.yaml
+name: deploy-replica
+services:
+  web:
+    container_name: "web"
+    image: nginx:latest
+    expose:
+      - 80
+    deploy:
+      replicas: 3
+```
+
+
+
+```cmd
+$ docker compose up -d               
+[+] Building 0.0s (0/0)                                                                                      docker:desktop-linux
+WARNING: The "web" service is using the custom container name "web". Docker requires each container to have a unique name. Remove the custom name to scale the service.
+```
+
+
+
+#### [예시] `resource` 할당하기
+
+다음 `docker-compose.yaml`을 이용하여 프로젝트를 실행합니다.
+
+```yaml
+# docker-compose.yaml
+name: deploy-replica
+services:
+  web:
+    image: nginx:latest
+    expose:
+      - 80
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 500M
+```
+
+```cmd
+$ docker compose up -d
+[+] Building 0.0s (0/0)                                                                                      docker:desktop-linux
+[+] Running 3/3
+ ✔ Container deploy-replica-web-1  Started                                                                                   0.6s 
+```
+
+
+
+`docker stats`를 이용하여 메모리 제한을 확인할 수 있습니다. 
+
+```cmd
+$ docker stats deploy-replica-web-1
+CONTAINER ID   NAME                   CPU %     MEM USAGE / LIMIT   MEM %     NET I/O     BLOCK I/O     PIDS
+e07340054e9a   deploy-replica-web-1   0.00%     5.805MiB / 500MiB   1.16%     806B / 0B   0B / 12.3kB   7
+```
 
 
 
 
-#### depend_on
+
+
+
+### 2.3.4. depend_on
 
 > https://docs.docker.com/compose/startup-order/
 >
@@ -2760,6 +2906,43 @@ services:
 ```
 
 
+
+### 2.3.6. health check 
+
+`healthcheck` declares a check that's run to determine whether or not the service containers are "healthy". It works in the same way, and has the same default values, as the [HEALTHCHECK Dockerfile instructionopen_in_new](https://docs.docker.com/engine/reference/builder/#healthcheck) set by the service's Docker image. Your Compose file can override the values set in the Dockerfile.
+
+```yml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost"]
+  interval: 1m30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+  start_interval: 5s
+```
+
+`interval`, `timeout`, `start_period`, and `start_interval` are [specified as durations](https://docs.docker.com/compose/compose-file/11-extension/#specifying-durations).
+
+`test` defines the command Compose runs to check container health. It can be either a string or a list. If it's a list, the first item must be either `NONE`, `CMD` or `CMD-SHELL`. If it's a string, it's equivalent to specifying `CMD-SHELL` followed by that string.
+
+```yml
+# Hit the local web app
+test: ["CMD", "curl", "-f", "http://localhost"]
+```
+
+Using `CMD-SHELL` runs the command configured as a string using the container's default shell (`/bin/sh` for Linux). Both forms below are equivalent:
+
+```yml
+test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+test: curl -f https://localhost || exit 1
+```
+
+`NONE` disables the healthcheck, and is mostly useful to disable the Healthcheck Dockerfile instruction set by the service's Docker image. Alternatively, the healthcheck set by the image can be disabled by setting `disable: true`:
+
+```yml
+healthcheck:
+  disable: true
+```
 
 
 
@@ -2815,23 +2998,28 @@ volumes:
 
 
 
-
-
-#### [연습] deploy 이용하여 동일한 서비스 여러개 띄우기
+##### TODO [연습] health check
 
 ```yaml
+services:
+  numbers-api:
+    image: diamol/ch08-numbers-api:v3
+    ports:
+      - "8087:80"
+    healthcheck:
+      interval: 5s
+      timeout: 1s
+      retries: 2
+      start_period: 5s
+    networks:
+      - app-net
 ```
 
+CASE
 
-
-
-
-#### [연습] deploy 이용하여 update 설정 제어하기
-
-```yaml
-```
-
-
+- Health check 설정하여 체크
+- timeout 유도하여 체크
+- start_period 유도하여 체크
 
 
 
