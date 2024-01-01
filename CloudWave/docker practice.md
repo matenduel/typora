@@ -1085,30 +1085,22 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 
 
-**주의사항**
-
 ### Dockerfile
 
-| Instruction                                                  | Description                                                 |
-| :----------------------------------------------------------- | :---------------------------------------------------------- |
-| [`ADD`](https://docs.docker.com/engine/reference/builder/#add) | Add local or remote files and directories.                  |
-| [`ARG`](https://docs.docker.com/engine/reference/builder/#arg) | Use build-time variables.                                   |
-| [`CMD`](https://docs.docker.com/engine/reference/builder/#cmd) | Specify default commands.                                   |
-| [`COPY`](https://docs.docker.com/engine/reference/builder/#copy) | Copy files and directories.                                 |
-| [`ENTRYPOINT`](https://docs.docker.com/engine/reference/builder/#entrypoint) | Specify default executable.                                 |
-| [`ENV`](https://docs.docker.com/engine/reference/builder/#env) | Set environment variables.                                  |
-| [`EXPOSE`](https://docs.docker.com/engine/reference/builder/#expose) | Describe which ports your application is listening on.      |
-| [`FROM`](https://docs.docker.com/engine/reference/builder/#from) | Create a new build stage from a base image.                 |
-| [`HEALTHCHECK`](https://docs.docker.com/engine/reference/builder/#healthcheck) | Check a container's health on startup.                      |
-| [`LABEL`](https://docs.docker.com/engine/reference/builder/#label) | Add metadata to an image.                                   |
-| [`MAINTAINER`](https://docs.docker.com/engine/reference/builder/#maintainer-deprecated) | Specify the author of an image.                             |
-| [`ONBUILD`](https://docs.docker.com/engine/reference/builder/#onbuild) | Specify instructions for when the image is used in a build. |
-| [`RUN`](https://docs.docker.com/engine/reference/builder/#run) | Execute build commands.                                     |
-| [`SHELL`](https://docs.docker.com/engine/reference/builder/#shell) | Set the default shell of an image.                          |
-| [`STOPSIGNAL`](https://docs.docker.com/engine/reference/builder/#stopsignal) | Specify the system call signal for exiting a container.     |
-| [`USER`](https://docs.docker.com/engine/reference/builder/#user) | Set user and group ID.                                      |
-| [`VOLUME`](https://docs.docker.com/engine/reference/builder/#volume) | Create volume mounts.                                       |
-| [`WORKDIR`](https://docs.docker.com/engine/reference/builder/#workdir) | Change working directory.                                   |
+| Instruction                                                  | Description                               |
+| :----------------------------------------------------------- | :---------------------------------------- |
+| [`FROM`](https://docs.docker.com/engine/reference/builder/#from) | 사용할 `Base` 이미지를 설정합니다.        |
+| [`ARG`](https://docs.docker.com/engine/reference/builder/#arg) | `build`에 사용할 변수를 설정합니다.       |
+| [`ENV`](https://docs.docker.com/engine/reference/builder/#env) | 환경 변수를 설정합니다.                   |
+| [`ADD`](https://docs.docker.com/engine/reference/builder/#add) | 파일 또는 폴더(`directory`)를 추가합니다. |
+| [`COPY`](https://docs.docker.com/engine/reference/builder/#copy) | 파일 또는 폴더(`directory`)를 복사합니다. |
+| [`LABEL`](https://docs.docker.com/engine/reference/builder/#label) | 라벨을 추가합니다.                        |
+| [`EXPOSE`](https://docs.docker.com/engine/reference/builder/#expose) | 포트를 외부에 노출합니다.                 |
+| [`USER`](https://docs.docker.com/engine/reference/builder/#user) | `User`와 `Group`을 설정합니다.            |
+| [`WORKDIR`](https://docs.docker.com/engine/reference/builder/#workdir) | `Working Directory`를 변경합니다.         |
+| [`RUN`](https://docs.docker.com/engine/reference/builder/#run) | 명령어를 실행합니다.                      |
+| [`CMD`](https://docs.docker.com/engine/reference/builder/#cmd) | 기본 명령어를 정의합니다.                 |
+| [`ENTRYPOINT`](https://docs.docker.com/engine/reference/builder/#entrypoint) | 필수로 실행할 명령어를 정의합니다.        |
 
 
 

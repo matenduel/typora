@@ -1892,58 +1892,22 @@ volumes:
 
 ##### Long Syntax
 
+> https://docs.docker.com/compose/compose-file/05-services/#long-syntax-5
+
 ```yaml
 volumes:
   - type: volume
     source: mydata
     target: /data
-    volume:
-      nocopy: true
     read_only: true
 ```
 
-TODO
-
-`long syntax` 방식은 short보다 더 많은 속성을 제어할 수 있습니다. 
-
-- `type`: The mount type. Either `volume`, `bind`, `tmpfs`, `npipe`, or `cluster`
-
-- `source`: The source of the mount, a path on the host for a bind mount, or the name of a volume defined in the [top-level `volumes` key](https://docs.docker.com/compose/compose-file/07-volumes/). Not applicable for a tmpfs mount.
-
-- `target`: The path in the container where the volume is mounted.
-
-- `read_only`: Flag to set the volume as read-only.
-
-- ```
-    bind
-    ```
-
-    : Used to configure additional bind options:
-
-    - `propagation`: The propagation mode used for the bind.
-    - `create_host_path`: Creates a directory at the source path on host if there is nothing present. Compose does nothing if there is something present at the path. This is automatically implied by short syntax for backward compatibility with `docker-compose` legacy.
-    - `selinux`: The SELinux re-labeling option `z` (shared) or `Z` (private)
-
-- ```
-    volume
-    ```
-
-    : Configures additional volume options:
-
-    - `nocopy`: Flag to disable copying of data from a container when a volume is created.
-
-- ```
-    tmpfs
-    ```
-
-    : Configures additional tmpfs options:
-
-    - `size`: The size for the tmpfs mount in bytes (either numeric or as bytes unit).
-    - `mode`: The file mode for the tmpfs mount as Unix permission bits as an octal number.
-
-- `consistency`: The consistency requirements of the mount. Available values are platform specific.
-
- 
+| Attributes  | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| `type`      | 해당 볼륨의 `mount type`을 설정합니다. <br />- `volume`: `source`로 `volume`을 사용합니다.<br />- `bind`: `source`로 `host`의 `directory`를 사용합니다 |
+| `source`    | `volume`이름 또는 `host`의 `directory` 경로를 설정합니다.    |
+| `target`    | 컨테이너에서 볼륨이 `mount`될 `directory` 경로를 설정합니다. |
+| `read_only` | 읽기 전용 여부를 설정합니다.                                 |
 
 
 
@@ -2491,7 +2455,7 @@ $ docker network inspect across_project | jq '.[].Containers'
 
 
 
-### 2.2.6 config & secret
+### 2.2.6. config & secret
 
 ```yaml
 services:
@@ -2504,25 +2468,15 @@ services:
         uid: "103"
         gid: "103"
         mode: 0440  # Octal notation
-configs:
-  my_config:
-    external: true
-  http_config:
-    file: ./httpd.conf
-```
-
-
-
-```yaml
-services:
-  frontend:
-    image: example/webapp
     secrets:
       - source: server-certificate
         target: server.cert
         uid: "103"
         gid: "103"
-        mode: 0440
+        mode: 0440  # Octal notation
+configs:
+  http_config:
+    file: ./httpd.conf
 secrets:
   server-certificate:
     file: ./server.cert
@@ -2530,35 +2484,20 @@ secrets:
 
 
 
-Secrets are a flavor of [Configs](https://docs.docker.com/compose/compose-file/08-configs/) focusing on sensitive data, with specific constraint for this usage.
-
-Services can only access secrets when explicitly granted by a [`secrets`](https://docs.docker.com/compose/compose-file/05-services/#secrets) attribute within the `services` top-level element.
-
-
-
-#### Secret관리
-
-> https://docs.docker.com/compose/use-secrets/
-
-
-
 #### Config Vs. Secret
 
--> swarm을 쓰지 않는 상황에서 차이는 없음
+|                 | Config                                | Sercret                                    |
+| --------------- | ------------------------------------- | ------------------------------------------ |
+| 목적            | 외부에서 서버 설정을 위한 변수를 제공 | 비밀번호와 같은 민감한 데이터를 제공       |
+| 기본 Mount 위치 | `/<config-name>`                      | `/run/secrets/<secret-name>`               |
+| 암호화 여부     | X                                     | O (`Swarm`을 사용하는 경우)<br />X (그 외) |
 
 
 
-#### Config Vs. Mount
+#### Config Vs. Mount(Volume)
 
--> 차이 거의 없음
-
--> 세부 권한을 다르게 가능?
-
-
-
-#### mode
-
-이런 문제가 생기는 경우를 방지하기 위해, 리눅스에서는 각 파일 및 디렉토리에 대해 **"읽기(r)", "쓰기(w)", "실행(x)"** 권한(permission)을 파일 개별적으로 지정할 수 있도록 만들어 놓았습니다. 그리고 이 세 가지 권한을 **"파일을 소유한 사용자(user)", "특정 그룹(group)에 소속된 사용자", "그 외 사용자(others)"**에 대해 각각 지정할 수 있게 만들었습니다.
+- 컨테이너 외부에서 파일을 제공한다는 점에서는 두개는 유사합니다. 
+- `Volume`과는 달리 `Config`는 `Mode`를 이용하여 파일의 권한을 세부적으로 관리할 수 있습니다. 
 
 
 
@@ -2566,17 +2505,24 @@ Services can only access secrets when explicitly granted by a [`secrets`](https:
 
 ##### [연습] config를 특정 디렉토리에 mount하기
 
+다음 명령어를 이용하여 `password.txt`를 생성합니다. 
 
-
-다음 명령어를 사용하여 파일 생성
+> 임의의 텍스트 파일을 메모장등을 이용해서 생성해도 무방합니다. 
 
 ```cmd
+# Window - CMD
+$ echo %RANDOM% > password.txt 
+
+# Linux
 $ openssl rand -base64 14 > password.txt 
 ```
 
 
 
+다음 `docker-compose.yaml`을 이용하여 프로젝트를 실행합니다. 
+
 ```yaml
+# docker-compose.yaml
 version: '3.8'
 name: 'config-mount'
 
@@ -2598,6 +2544,8 @@ configs:
 
 
 
+`docker exec`를 통해 `config` 파일을 확인해볼 수 있습니다. 
+
 ```cmd
 $ docker exec config-mount-ubuntu-1 /bin/bash -c "cat /root/web_password.txt && ls -al /root/"  
 6M9tLBo4u8EEIbb6Pis=
@@ -2608,8 +2556,6 @@ drwxr-xr-x 1 root root 4096 Dec 28 07:58 ..
 -rw-r--r-- 1 root root  161 Jul  9  2019 .profile
 -rw-r--r-- 1 root root   21 Dec 28 07:51 web_password.txt
 ```
-
-
 
 
 
@@ -2661,7 +2607,8 @@ volumes:
 
 #### [예시] `Anchor & Alias`를 이용한 `YAML` 파일 확인하기
 
-위에 있는 `docker-compose.yaml`를 대상으로 `docker compose config`를 사용하면 다음과 같이 `Anchor & Alias`가 반영된 `YAML`을 확인할 수 있습니다. 
+위에 있는 `docker-compose.yaml`를 대상으로 `docker compose config`를 사용하면,
+다음과 같이 `Anchor & Alias`가 반영된 `YAML`을 확인할 수 있습니다. 
 
 ```cmd
 $ docker compose config
@@ -2700,7 +2647,6 @@ x-common:
   volumes:
     - source:/code
 x-value: x
-
 ```
 
 
@@ -2712,28 +2658,89 @@ x-value: x
 > https://docs.docker.com/compose/compose-file/15-profiles/
 
 ```yaml
-services:
-  frontend:
-    image: frontend
-    profiles: ["frontend"]
+version: '3.8'
 
-  phpmyadmin:
-    image: phpmyadmin
+services:
+  postgres:
+    image: postgres:16.1-bullseye
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+
+  server:
+    image: ubuntu:22.04
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
     depends_on:
-      - db
+      - postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=user@sample.com
+      - PGADMIN_DEFAULT_PASSWORD=SuperSecret
+    depends_on:
+      - postgres
+      - server
     profiles:
       - debug
-
-  backend:
-    image: backend
-
-  db:
-    image: mysql
 ```
 
 
 
 #### [예시] `profile`을 이용하여 일부 서비스만 실행하기
+
+```yaml
+# docker-compose.yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16.1-bullseye
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+
+  server:
+    image: ubuntu:22.04
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    depends_on:
+      - postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=user@sample.com
+      - PGADMIN_DEFAULT_PASSWORD=SuperSecret
+    depends_on:
+      - postgres
+      - server
+    profiles:
+      - debug
+```
+
+`--profile` 없이 프로젝트를 실행시키면 다음과 같이 `profiles`가 선언되지 않은 2개의 서비스만 실행되는 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose -f docker-compose.yaml up -d
+[+] Building 0.0s (0/0)                                        docker-container:multi-arch-builder
+[+] Running 4/4
+ ✔ Network compose_default         Created                     0.1s 
+ ✔ Container compose-postgres-1    Started                     0.1s 
+ ✔ Container compose-server-1      Started                     0.1s 
+```
+
+
+
+`debug` 프로파일을 이용하여 프로젝트를 재실행하면, 기존에 생성되지 않았던 `pgadmin` 서비스가 실행되는 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose -f docker-compose.yaml --profile debug up -d
+[+] Building 0.0s (0/0)                                         docker-container:multi-arch-builder
+[+] Running 3/3
+ ✔ Container compose-postgres-1  Running                        0.0s 
+ ✔ Container compose-server-1    Running                        0.0s 
+ ✔ Container compose-pgadmin-1   Started                        0.1s 
+```
 
 
 
@@ -2866,10 +2873,6 @@ e07340054e9a   deploy-replica-web-1   0.00%     5.805MiB / 500MiB   1.16%     80
 
 
 
-
-
-
-
 ### 2.3.4. depend_on
 
 > https://docs.docker.com/compose/startup-order/
@@ -2877,41 +2880,56 @@ e07340054e9a   deploy-replica-web-1   0.00%     5.805MiB / 500MiB   1.16%     80
 > https://docs.docker.com/compose/compose-file/05-services/#depends_on
 
 ```yaml
-# Short
-services:
-  web:
-    build: .
-    depends_on:
-      - db
-      - redis
-  redis:
-    image: redis
-  db:
-    image: postgres
+# docker-compose.yaml
+version: '3.8'
 
-# Long
 services:
-  web:
-    build: .
+  postgres:
+    image: postgres:16.1-bullseye
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+
+  server:
+    image: ubuntu:22.04
+    stdin_open: true
+    tty: true        
+    # Short Syntax - List
     depends_on:
-      db:
-        condition: service_healthy
-        restart: true
-      redis:
+      - postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=user@sample.com
+      - PGADMIN_DEFAULT_PASSWORD=SuperSecret
+    # Long Syntax - Map
+    depends_on:
+      postgres:
         condition: service_started
-  redis:
-    image: redis
-  db:
-    image: postgres
+        restart: false
+      server:
+        condition: service_started
+    profiles:
+      - debug
 ```
 
 
 
-### 2.3.6. health check 
+#### Long Syntax
 
-`healthcheck` declares a check that's run to determine whether or not the service containers are "healthy". It works in the same way, and has the same default values, as the [HEALTHCHECK Dockerfile instructionopen_in_new](https://docs.docker.com/engine/reference/builder/#healthcheck) set by the service's Docker image. Your Compose file can override the values set in the Dockerfile.
+| Attributes  | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| `condition` | 상위 서비스의 상태 조건을 정의합니다. <br />- `service_started`: 서비스가 실행된 상태<br />- `service_healthy`: 서비스가 `healthy`인 상태<br />- `service_completed_successfully`: 서비스가 실행 완료된 상태 |
+| `restart`   | 상위 서비스가 업데이트된 경우, 서비스를 재실행합니다.        |
+| `required`  | `false`인 경우 상위 서비스가 실행되지 않았더라도 서비스를 실행합니다. |
 
-```yml
+
+
+### 2.3.5. health check 
+
+> https://docs.docker.com/engine/reference/builder/#healthcheck
+
+```yaml
 healthcheck:
   test: ["CMD", "curl", "-f", "http://localhost"]
   interval: 1m30s
@@ -2921,30 +2939,24 @@ healthcheck:
   start_interval: 5s
 ```
 
-`interval`, `timeout`, `start_period`, and `start_interval` are [specified as durations](https://docs.docker.com/compose/compose-file/11-extension/#specifying-durations).
-
-`test` defines the command Compose runs to check container health. It can be either a string or a list. If it's a list, the first item must be either `NONE`, `CMD` or `CMD-SHELL`. If it's a string, it's equivalent to specifying `CMD-SHELL` followed by that string.
-
-```yml
-# Hit the local web app
-test: ["CMD", "curl", "-f", "http://localhost"]
-```
-
-Using `CMD-SHELL` runs the command configured as a string using the container's default shell (`/bin/sh` for Linux). Both forms below are equivalent:
-
-```yml
-test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
-test: curl -f https://localhost || exit 1
-```
-
-`NONE` disables the healthcheck, and is mostly useful to disable the Healthcheck Dockerfile instruction set by the service's Docker image. Alternatively, the healthcheck set by the image can be disabled by setting `disable: true`:
-
-```yml
-healthcheck:
-  disable: true
-```
+- `healthcheck`를 이용하여 서비스의 상태를 확인할 수 있습니다. 
+- 시간은 `{value}{unit}` 형태로 작성하며, 지원하는 시간 단위는 다음과 같습니다. 
+  - `us(microseconds)`
+  - `ms(milliseconds)`
+  - `s(seconds)`
+  - `m(minutes)`
+  - `h(hours)`
 
 
+
+| Attributes       | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `test`           | 컨테이너 상태 체크를 위한 명령어를 설정합니다. <br />`NONE`으로 설정한 경우 `Dockerfile`에 정의된 `HEALTHCHECK`를 비활성화 합니다. |
+| `interval`       | 상태 체크 간격을 의미합니다.                                 |
+| `timeout`        | 응답까지 걸리는 최대 시간을 의미합니다.<br />만약 해당 시간까지 응답이 도착하지 않으면 `fail`로 판단합니다. |
+| `start_period`   | 컨테이너 실행까지 소요되는 시간을 의미합니다. <br />해당 시간동안에는 상태가 `fail`인 경우에도 카운트되지 않습니다. |
+| `start_interval` | `start_period`내에서의 체크 간격을 의미합니다.               |
+| `disable`        | `HEALTHCHECK`를 비활성화 합니다. <br />`test: ["NONE"]`과 동일합니다. |
 
 
 
@@ -2984,44 +2996,36 @@ volumes:
 
 
 
-
-
-#### [연습] depend_on을 이용하여 db 생성 후 application 실행하기
-
-
-
-#### [연습] `profile` 예제 -> like airflow
+#### [연습] `depend_on`을 이용하여 `DB` 생성 후 `application` 실행하기
 
 ```yaml
-# PostgreSQL & PgAdmin
-```
+# docker-compose.yaml
+version: '3.8'
 
-
-
-##### TODO [연습] health check
-
-```yaml
 services:
-  numbers-api:
-    image: diamol/ch08-numbers-api:v3
-    ports:
-      - "8087:80"
-    healthcheck:
-      interval: 5s
-      timeout: 1s
-      retries: 2
-      start_period: 5s
-    networks:
-      - app-net
+  postgres:
+    image: postgres:16.1-bullseye
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+
+  server:
+    image: ubuntu:22.04
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    depends_on:
+      - postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=user@sample.com
+      - PGADMIN_DEFAULT_PASSWORD=SuperSecret
+    depends_on:
+      - postgres
+      - server
+    profiles:
+      - debug
 ```
-
-CASE
-
-- Health check 설정하여 체크
-- timeout 유도하여 체크
-- start_period 유도하여 체크
-
-
 
 
 
@@ -3076,6 +3080,12 @@ CASE
 
 
 
+### [실습-2] EC2 인스턴스에서 컨테이너 실행하기
+
+> Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
+
+
+
 ### [실습-3] Web Appliation 서버?
 
 > (deploy) replica 설정
@@ -3083,16 +3093,6 @@ CASE
 > health check 설정
 >
 > anchor&alias 설정 -> Anchor는 제시해주기?
-
-
-
-### [실습-2] EC2 인스턴스에서 컨테이너 실행하기
-
-> Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
-
-
-
-
 
 
 
