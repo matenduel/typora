@@ -877,7 +877,7 @@ docker rm [OPTIONS] CONTAINER [CONTAINER...]
 
 
 
-#### Tip
+**Tip**
 
 종료된 모든 컨테이너를 삭제하려면 다음과 같이 사용하면 됩니다.  
 
@@ -2893,10 +2893,12 @@ on linux_amd64
 ### [실습-2] 컨테이너를 사용하여 `terraform` 코드 실행하기
 
 > `terraform destroy` 명령어를 통해 전개된 AWS 인프라를 제거할 수 있습니다. 
+>
+> ! `volume`을 삭제하면 `terraform`을 통해 생성한 인프라를 관리할 수 없게 됩니다.
 
 - `source_code`이름을 가진 `volume`을 생성합니다. 
 
-- `GitSync` 컨테이너에 실행합니다.
+- `GitSync` 컨테이너를 실행합니다.
 
   > https://github.com/kubernetes/git-sync/releases/tag/v4.1.0
 
@@ -2935,7 +2937,7 @@ on linux_amd64
   terraform apply -var="aws_access_key=${AWS_ACCESS_KEY_ID}" -var="aws_secret_key=${AWS_SECRET_ACCESS_KEY}" -auto-approve
   ```
 
-- `AWS Console` 
+- `AWS Console`을 이용하여 생성된 인프라를 확인합니다.
 
 
 
