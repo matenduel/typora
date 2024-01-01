@@ -9,8 +9,6 @@
 
 ## 2.1. Compose CLI
 
-> https://docs.docker.com/engine/reference/commandline/compose/
-
 ### 시작하기 전에
 
 > https://docs.docker.com/compose/reference/
@@ -34,14 +32,14 @@ Options:
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Instruction    | Short | Description                                |
-| :------------- | ----- | :----------------------------------------- |
-| `env-file`     |       | Add local or remote files and directories. |
-| `file`         | `-f`  | Use build-time variables.                  |
-| `profile`      |       | Specify a profile to enable                |
-| `project-name` | `-p`  | Project name                               |
+| Instruction    | Short | Description                           |
+| :------------- | ----- | :------------------------------------ |
+| `env-file`     |       | 환경 변수를 저장한 파일을 설정합니다. |
+| `file`         | `-f`  | 사용할 `compose` 파일을 지정합니다.   |
+| `profile`      |       | 사용할 프로파일을 지정합니다.         |
+| `project-name` | `-p`  | 프로젝트 이름을 설정합니다.           |
 
 
 
@@ -53,6 +51,8 @@ Options:
 - 프로젝트 이름이 설정되지 않은 경우, 현재 디렉토리 이름이 프로젝트 이름으로 설정됩니다. 
 
 
+
+#### Compose file 버전별 호환 목록
 
 | **Compose file format** | **Docker Engine release** |
 | ----------------------- | ------------------------- |
@@ -74,17 +74,13 @@ Options:
 
 
 
-### `compose` 버젼 확인
+### `docker compose` 버젼 확인
 
 > https://docs.docker.com/engine/reference/commandline/compose_version/
 
 ```
 docker compose version [OPTIONS]
 ```
-
-
-
-**출력 예시**
 
 ```cmd
 $ docker compose version
@@ -103,15 +99,15 @@ docker compose up [OPTIONS] [SERVICE...]
 
 
 
-**주요 Options**
+**주요 옵션**
 
 | Option                      | Short | Default | Description                                                  |
 | --------------------------- | ----- | ------- | ------------------------------------------------------------ |
-| `--abort-on-container-exit` |       |         | Stops all containers if any container was stopped. Incompatible with -d |
-| `--build`                   |       |         | Build images before starting containers.                     |
-| `--detach`                  | `-d`  |         | Detached mode: Run containers in the background              |
-| `--force-recreate`          |       |         | Recreate containers even if their configuration and image haven't changed. |
-| `--remove-orphans`          |       |         | Remove containers for services not defined in the Compose file. |
+| `--abort-on-container-exit` |       |         | 1개 이상의 컨테이너가 멈춘(`stopped`) 경우, 모든 컨테이너를 종료합니다.<br />`-d`와는 함께 사용할 수 없습니다. |
+| `--build`                   |       |         | 컨테이너 실행 전에 이미지를 빌드합니다.                      |
+| `--detach`                  | `-d`  |         | 컨테이너를 백그라운드에서 실행시킵니다.                      |
+| `--force-recreate`          |       |         | 변경 여부와 관계없이 모든 컨테이너를 재생성합니다.           |
+| `--remove-orphans`          |       |         | `compose` 파일에 정의되어 있지 않은 서비스를 위한 컨테이너를 삭제합니다. |
 
 
 
@@ -121,19 +117,73 @@ docker compose up [OPTIONS] [SERVICE...]
 
 
 
-**출력 예시**
+#### [예시] 프로젝트 백그라운드로 실행하기
 
 ```cmd
 $ docker compose up -d
-[+] Building 0.0s (0/0)                                                                                         
+[+] Building 0.0s (0/0)                                                                                      
 [+] Running 6/6
- ✔ Network private                  Created                                                                0.0s 
- ✔ Network db                       Created                                                                0.0s 
- ✔ Volume "db-data"                 Created                                                                0.0s 
- ✔ Container cloud_wave-frontend-1  Started                                                                0.6s 
- ✔ Container cloud_wave-server-1    Started                                                                0.7s 
- ✔ Container db_postgres            Started                                                                0.6s 
+ ✔ Network private                  Created                        0.0s
+ ✔ Network db                       Created                        0.0s
+ ✔ Volume "db-data"                 Created                        0.0s
+ ✔ Container cloud_wave-frontend-1  Started                        0.6s
+ ✔ Container cloud_wave-server-1    Started                        0.7s
+ ✔ Container db_postgres            Started                        0.6s
 ```
+
+
+
+#### [예시] `--abort-on-container-exit` 사용하기
+
+```yaml
+# docker-compose.yaml
+version: '3.8'
+name: 'cloudwave'
+
+services:
+  success:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+
+  fail:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep fail
+    networks:
+      private: {}
+
+networks:
+  private:
+```
+
+
+
+`fail` 서비스를 위한 컨테이너가 정상적으로 실행되지 않으므로, 다음과 같이 프로젝트의 모든 컨테이너가 종료되는 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose up --abort-on-container-exit
+[+] Building 0.0s (0/0)                                                                    docker:desktop-linux
+[+] Running 2/0
+ ✔ Container cloudwave-success-1  Created                                                                  0.0s 
+ ✔ Container cloudwave-fail-1     Created                                                                  0.0s 
+Attaching to cloudwave-fail-1, cloudwave-success-1
+cloudwave-fail-1     | sleep: invalid time interval 'fail'
+cloudwave-fail-1     | Try 'sleep --help' for more information.
+cloudwave-fail-1 exited with code 1
+Aborting on container exit...
+[+] Stopping 2/2
+ ✔ Container cloudwave-success-1  Stopped                                                                 10.1s 
+ ✔ Container cloudwave-fail-1     Stopped                                                                  0.0s 
+```
+
+
 
 
 
@@ -147,12 +197,23 @@ docker compose ls [OPTIONS]
 
 
 
-**출력 예시**
+**주요 옵션**
+
+| Option     | Default | Short | Description                                          |
+| ---------- | ------- | ----- | ---------------------------------------------------- |
+| `--all`    |         | `-a`  | 종료된 프로젝트를 포함한 모든 프로젝트를 표시합니다. |
+| `--filter` |         |       | 필터 조건을 추가합니다.                              |
+| `--quiet`  |         | `-q`  | 프로젝트의 이름만 표기합니다.                        |
+
+
+
+#### [예시] 이름에 `cloud`가 포함된 모든 프로젝트 목록 보기
 
 ```cmd
-$ docker compose ls
+$ docker compose ls --filter "name=cloud" -a
 NAME               STATUS              CONFIG FILES
 cloud_wave         running(3)          <PROJECT_PATH>/docker-compose.yaml
+cloud_wave2        exited(2)           <PROJECT_PATH>/docker-compose.yaml
 ```
 
 
@@ -169,11 +230,12 @@ docker compose ps [OPTIONS] [SERVICE...]
 
 **주요 Options**
 
-| Option     | Short | Default | Description                                                  |
-| ---------- | ----- | ------- | ------------------------------------------------------------ |
-| `--all`    | `-a`  |         | Show all stopped containers (including those created by the run command) |
-| `--filter` |       |         | Filter services by a property (supported filters: status).   |
-| `--status` |       |         | Filter services by status. Values: [paused \| restarting \| removing \| running \| dead \| created \| exited] |
+| Option       | Short | Default | Description                                                  |
+| ------------ | ----- | ------- | ------------------------------------------------------------ |
+| `--all`      | `-a`  |         | 종료된 컨테이너를 포함한 모든 컨테이너를 표시합니다.         |
+| `--quiet`    | `-q`  |         | 컨테이너 ID만 표기합니다.                                    |
+| `--services` |       |         | 서비스만 표기합니다.                                         |
+| `--status`   |       |         | 상태값을 기반으로 서비스를 필터링합니다. <br />[paused \| restarting \| removing \| running \| dead \| created \| exited] |
 
 
 
@@ -183,17 +245,15 @@ docker compose ps [OPTIONS] [SERVICE...]
 
 
 
-**출력 예시**
+#### [예시] 이름이 `cloud_wave`인 프로젝트의 실행중인 컨테이너 목록 보기
 
 ```cmd
-$ docker compose ps
+$ docker compose -p cloud_wave ps
 NAME                    IMAGE                    COMMAND                  SERVICE             CREATED             STATUS              PORTS
 cloud_wave-frontend-1   nginx:latest             "/docker-entrypoint.…"   frontend            21 minutes ago      Up 21 minutes       0.0.0.0:80->80/tcp
 cloud_wave-server-1     ubuntu:22.04             "/bin/bash -c 'sleep…"   server              21 minutes ago      Up 21 minutes       
 db_postgres             postgres:16.1-bullseye   "docker-entrypoint.s…"   postgres            19 minutes ago      Up 19 minutes       5432/tcp
 ```
-
-
 
 
 
@@ -210,13 +270,13 @@ docker compose images [OPTIONS] [SERVICE...]
 **주의 사항**
 
 - CLI를 통해 전달된 `project-name`또는  `configuration file`에 명시된 `name`을 기반으로 조회합니다.  
-- 
 
-**출력 예시**
+
+
+#### [예시] 이름이 `cloud_wave`인 프로젝트의 이미지 목록 보기
 
 ```cmd
 $ docker compose images
-docker compose images
 CONTAINER               REPOSITORY          TAG                 IMAGE ID            SIZE
 cloud_wave-frontend-1   nginx               latest              d453dd892d93        187MB
 cloud_wave-server-1     ubuntu              22.04               174c8c134b2a        77.9MB
@@ -235,29 +295,25 @@ docker compose down [OPTIONS] [SERVICES]
 
 
 
-**주요 Options**
+**주요 옵션**
 
 | Option             | Short | Default | Description                                                  |
 | ------------------ | ----- | ------- | ------------------------------------------------------------ |
-| `--remove-orphans` |       |         | Remove containers for services not defined in the Compose file. |
-| `--rmi`            |       |         | Remove images used by services. "local" remove only images that don't have a custom tag ("local"\|"all") |
-| `--timeout`        | `-t`  |         | Specify a shutdown timeout in seconds                        |
-| `--volumes`        | `-v`  |         | Remove named volumes declared in the "volumes" section of the Compose file and anonymous volumes attached to containers. |
+| `--remove-orphans` |       |         | `Compose` 파일에 정의되지 않은 서비스를 구성하는 컨테이너도 삭제합니다. |
+| `--volumes`        | `-v`  |         | `Copose` 파일에 정의된 `anonymous` 볼륨을 같이 삭제합니다.   |
 
 
 
 **주의 사항**
 
 - 현재 디렉토리에 `docker-compose.yaml` 파일이 존재하지 않는 경우, `-p` 또는 `-f`를 이용하여야 합니다. 
+- `--remove-orphans`를 사용하지 않을 경우, `compose` 파일에 정의된 서비스를 구성하는 컨테이너만 삭제합니다. 
+- `external`로 정의된 `network`와 `volume`은 삭제되지 않습니다. 
 - 다른 프로젝트에서 사용중인 리소스(`volume`, `network`, ...)는 삭제되지 않습니다. 
 
 
 
-**출력 예시**
-
-
-
-**출력 예시**
+#### [예시] 이름이 `cloud_wave`인 프로젝트 삭제하기
 
 ```cmd
 $ docker compose -p cloud_wave down
@@ -265,6 +321,55 @@ $ docker compose -p cloud_wave down
  ✔ Container cloud_wave-postgres-1  Removed                                                               0.1s 
  ✔ Container cloud_wave-frontend-1  Removed                                                               0.0s 
  ✔ Container cloud_wave-server-1    Removed                                                               10.1s 
+```
+
+
+
+#### [예시] 프로젝트 삭제시 `volume`도 함께 제거하기
+
+```yaml
+# docker-compose.yaml
+version: '3.8'
+name: 'cloud_wave'
+
+services:
+  success:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+    volumes:
+      - anonymous:/anonymous
+      - named:/named
+      - external:/external
+
+networks:
+  private:
+
+volumes:
+  anonymous:
+  named:
+    name: "named_volume"
+  external:
+    name: "external"
+    external: true
+```
+
+
+
+`--volumes`을 사용하는 경우, 다음과 같이 `external`로 설정된 볼륨을 제외한 나머지 2개 볼륨이 함께 삭제되는 것을 확인할 수 있습니다.  
+
+```cmd
+$ docker compose -p cloud_wave down --volumes
+[+] Running 5/5
+ ✔ Container cloud_wave-fail-1     Removed                                                                 0.0s 
+ ✔ Container cloud_wave-success-1  Removed                                                                10.1s 
+ ✔ Volume named_volume             Removed                                                                 0.0s 
+ ✔ Volume cloud_wave_anonymous     Removed                                                                 0.0s 
+ ✔ Network cloud_wave_private      Removed                                                                 0.1s 
 ```
 
 
@@ -277,13 +382,16 @@ $ docker compose -p cloud_wave down
 docker compose restart [OPTIONS] [SERVICE...]
 ```
 
-**주의 사항** 
 
-Restarts all stopped and running services, or the specified services only.
 
-If you make changes to your `compose.yml` configuration, these changes are not reflected after running this command. For example, changes to environment variables (which are added after a container is built, but before the container's command is executed) are not updated after restarting.
+**주의 사항**
 
-**출력 예시**
+- 서비스를 명시하지 않은 경우, 모든 서비스에 대해서 종료된 컨테이너를 포함하여 재실행됩니다. 
+- 반영되지 않은 변경사항이 `compose` 파일에 존재하더라도, 해당 변경사항은 **반영되지 않습니다.** 
+
+
+
+#### [예시]  `cloud_wave` 프로젝트의 모든 서비스 재실행하기
 
 ```cmd
 $ docker compose -p cloud_wave restart
@@ -292,6 +400,18 @@ $ docker compose -p cloud_wave restart
  ✔ Container db_postgres            Started                                                                0.5s 
  ✔ Container cloud_wave-server-1    Started                                                                0.3s
 ```
+
+
+
+#### [예시] `cloud_wave` 프로젝트의 특정 서비스만 재실행하기
+
+```cmd
+$ docker compose -p cloud_wave restart server
+[+] Restarting 1/1
+ ✔ Container cloud_wave-server-1  Started                                                                    0.1s 
+```
+
+
 
 
 
@@ -310,7 +430,7 @@ docker compose start [SERVICE...]
 
 
 
-**출력 예시 - Stop** 
+#### [예시]  `cloud_wave` 프로젝트 종료하기
 
 ```cmd
 $  docker compose -p cloud_wave stop
@@ -320,7 +440,9 @@ $  docker compose -p cloud_wave stop
  ✔ Container cloud_wave-frontend-1  Stopped                                                                0.1s 
 ```
 
-**출력 예시 - Start**
+
+
+#### [예시]  `cloud_wave` 프로젝트 실행하기
 
 ```cmd
 $ docker compose -p cloud_wave start
@@ -347,7 +469,7 @@ docker compose unpause [SERVICE...]
 
 
 
-**출력 예시 - Pause** 
+#### [예시]  `cloud_wave` 프로젝트 중지하기
 
 ```cmd
 $  docker compose -p cloud_wave pause
@@ -356,7 +478,7 @@ $  docker compose -p cloud_wave pause
  ✔ Container db_postgres            Paused                                                                 0.0s 
 ```
 
-**출력 예시 - Unpause**
+#### [예시]  `cloud_wave` 프로젝트 실행하기
 
 ```cmd
 $ docker compose -p cloud_wave unpause
@@ -367,7 +489,7 @@ $ docker compose -p cloud_wave unpause
 
 
 
-### 서비스 빌드
+### 서비스 빌드하기
 
 > https://docs.docker.com/engine/reference/commandline/compose_build/
 
@@ -377,19 +499,15 @@ docker compose build [OPTIONS] [SERVICE...]
 
 
 
-**주요  Options**
+**주요  옵션**
 
-| Option        | Short | Default | Description                                                  |
-| ------------- | ----- | ------- | ------------------------------------------------------------ |
-| `--build-arg` |       |         | Set build-time variables for services.                       |
-| `--builder`   |       |         | Set builder to use.                                          |
-| `--memory`    | `-m`  |         | Set memory limit for the build container. Not supported by BuildKit. |
-| `--no-cache`  |       |         | Do not use cache when building the image                     |
-| `--progress`  |       | `auto`  | Set type of ui output (auto, tty, plain, quiet)              |
-| `--pull`      |       |         | Always attempt to pull a newer version of the image.         |
-| `--push`      |       |         | Push service images.                                         |
-| `--quiet`     | `-q`  |         | Don't print anything to STDOUT                               |
-| `--ssh`       |       |         | Set SSH authentications used when building service images. (use 'default' for using your default SSH Agent) |
+| Option        | Short | Default | Description                                |
+| ------------- | ----- | ------- | ------------------------------------------ |
+| `--build-arg` |       |         | 빌드시에 사용할 `ARG`를 설정합니다.        |
+| `--builder`   |       |         | 사용할 `builder`를 설정합니다.             |
+| `--no-cache`  |       |         | 이미지 빌드시 `Cache`를 사용하지 않습니다. |
+| `--pull`      |       |         | 항상 이미지를 새로 다운로드 받습니다.      |
+| `--push`      |       |         | 서비스의 이미지를 `Push` 합니다.           |
 
 
 
@@ -399,10 +517,10 @@ docker compose build [OPTIONS] [SERVICE...]
 
 
 
-**출력 예시**
+#### [예시] 프로젝트를 위한 이미지 빌드하기
 
 ```yaml
-# project-1.yaml
+# docker-compose.yaml
 version: "3.8"
 
 services:
@@ -422,6 +540,8 @@ services:
 ```
 
 
+
+다음과 같이 `server` 서비스의 `image`로 명시된 `compose:build.v1`로 명명된 것을 확인할 수 있습니다. 
 
 ```cmd
 $ docker compose build
@@ -443,9 +563,7 @@ $ docker compose build
 
 
 
-
-
-### 로그 확인
+### 프로젝트 로그 확인하기
 
 > https://docs.docker.com/engine/reference/commandline/compose_logs/
 
@@ -455,17 +573,15 @@ docker compose logs [OPTIONS] [SERVICE...]
 
 
 
-**주요 Options**
+**주요 옵션**
 
-| Option            | Short | Default | Description                                                  |
-| ----------------- | ----- | ------- | ------------------------------------------------------------ |
-| `--follow`        | `-f`  |         | Follow log output.                                           |
-| `--no-color`      |       |         | Produce monochrome output.                                   |
-| `--no-log-prefix` |       |         | Don't print prefix in logs.                                  |
-| `--since`         |       |         | Show logs since timestamp (e.g. 2013-01-02T13:23:37Z) or relative (e.g. 42m for 42 minutes) |
-| `--tail`          | `-n`  | `all`   | Number of lines to show from the end of the logs for each container. |
-| `--timestamps`    | `-t`  |         | Show timestamps.                                             |
-| `--until`         |       |         | Show logs before a timestamp (e.g. 2013-01-02T13:23:37Z) or relative (e.g. 42m for 42 minutes) |
+| Option         | Short | Default | Description                                                  |
+| -------------- | ----- | ------- | ------------------------------------------------------------ |
+| `--follow`     | `-f`  |         | 계속 로그를 표시합니다.                                      |
+| `--tail`       | `-n`  | `all`   | 마지막 `n`개의 로그를 표시합니다.                            |
+| `--timestamps` | `-t`  |         | `timestamp`를 표기합니다.                                    |
+| `--since`      |       |         | 특정 시간 이후에 발생한 로그만 표시합니다. <br />- timestamp (e.g. `2013-01-02T13:23:37Z`) <br />- relative (e.g. `42m`, `10s`, ...) |
+| `--until`      |       |         | 특정 시간 이전에 발생한 로그만 표시합니다. <br />- timestamp (e.g. `2013-01-02T13:23:37Z`) <br />- relative (e.g. `42m`, `10s`, ...) |
 
 
 
@@ -475,7 +591,7 @@ docker compose logs [OPTIONS] [SERVICE...]
 
 
 
-**출력 예시**
+#### [예시] `cloud_wave` 프로젝트의 모든 서비스의 로그를 2개 출력하기
 
 ```cmd
 $ docker compose -p cloud_wave logs -n 2
@@ -487,7 +603,7 @@ db_postgres            | 2023-12-27 08:28:52.219 UTC [1] LOG:  database system i
 
 
 
-### 프로세스 확인
+### 프로세스 확인하기
 
 > https://docs.docker.com/engine/reference/commandline/compose_top/
 
@@ -495,10 +611,12 @@ db_postgres            | 2023-12-27 08:28:52.219 UTC [1] LOG:  database system i
 docker compose top [SERVICES...]
 ```
 
-**출력 예시**
+
+
+#### [예시] `cloud_wave` 프로젝트의 컨테이너별 프로세스 확인하기
 
 ```cmd
-$ docker compose top              
+$ docker compose -p cloud_wave top              
 cloud_wave-frontend-1
 UID     PID     PPID    C    STIME   TTY   TIME       CMD
 root    38700   38649   0    08:58   ?     00:00:00   nginx: master process nginx -g daemon off;   
@@ -530,7 +648,9 @@ UID   PID     PPID    C    STIME   TTY   TIME       CMD
 docker compose config [OPTIONS] [SERVICE...]
 ```
 
-**출력 예시**
+
+
+#### [예시] `cloud_wave`의 `config` 확인하기
 
 ```cmd
 $ docker compose -p cloud_wave config    
@@ -583,15 +703,71 @@ docker compose rm [OPTIONS] [SERVICE...]
 
 
 
-**출력 예시**
+#### [예시] 프로젝트 삭제하기
+
+```yaml
+version: '3.8'
+name: 'cloud_wave'
+
+services:
+  success:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep infinity
+    networks:
+      private: {}
+  fail:
+    image: ubuntu:22.04
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - sleep fail
+    networks:
+      private: {}
+
+networks:
+  private:
+```
+
+
+
+프로젝트의 모든 컨테이너 목록을 다음과 같이 확인합니다. 
 
 ```cmd
-$ docker compose -p cloud_wave rm  
-? Going to remove db_postgres, cloud_wave-frontend-1, cloud_wave-server-1 Yes
-[+] Removing 3/0
- ✔ Container cloud_wave-frontend-1  Removed                                                                0.0s 
- ✔ Container db_postgres            Removed                                                                0.0s 
- ✔ Container cloud_wave-server-1    Removed                                                                0.0s 
+$ docker compose -p cloud_wave ps -a
+NAME                   IMAGE          COMMAND                   SERVICE   CREATED         STATUS                     PORTS
+cloud_wave-fail-1      ubuntu:22.04   "/bin/bash -c 'sleep…"   fail      6 seconds ago   Exited (1) 6 seconds ago   
+cloud_wave-success-1   ubuntu:22.04   "/bin/bash -c 'sleep…"   success   6 seconds ago   Up 6 seconds       
+```
+
+
+
+해당 프로젝트를 삭제하면 다음과 같이 종료된 컨테이너만 삭제되는 것을 볼 수 있습니다. 
+
+```cmd
+$ docker compose -p cloud_wave rm
+? Going to remove cloud_wave-fail-1 Yes
+[+] Removing 1/0
+ ✔ Container cloud_wave-fail-1  Removed                                                                    0.0s 
+```
+
+
+
+#### [예시] 프로젝트 종료 후 삭제하기
+
+`-s` 또는 `--stop`을 이용하여 프로젝트를 삭제하면, 다음과 같이 삭제 전 컨테이너를 종료하는 것을 확인할 수 있습니다. 
+
+```cmd
+$ docker compose -p cloud_wave rm -s
+[+] Stopping 2/2
+ ✔ Container cloud_wave-fail-1     Stopped                                                                 0.0s 
+ ✔ Container cloud_wave-success-1  Stopped                                                                10.1s 
+? Going to remove cloud_wave-fail-1, cloud_wave-success-1 Yes
+[+] Removing 2/0
+ ✔ Container cloud_wave-success-1  Removed                                                                 0.0s 
+ ✔ Container cloud_wave-fail-1     Removed                                                                 0.0s 
 ```
 
 
@@ -824,10 +1000,10 @@ cloud_wave-ubuntu-1   cloudwave           example.1           9fe790212381      
 
 
 
-#### [연습] 마지막 5개 로그만 확인하기
+#### [연습] 서비스별로 마지막 5개 로그 출력 후 `follow`하기
 
 ```cmd
-$ docker compose logs -n 5 
+$ docker compose logs -n 5 -f
 ex1-ubuntu-1  | Processing triggers for ca-certificates (20230311ubuntu0.22.04.1) ...
 ex1-nginx-1   | 2023/12/25 16:17:36 [notice] 1#1: start worker process 41
 ex1-nginx-1   | 2023/12/25 16:17:36 [notice] 1#1: start worker process 42
@@ -838,6 +1014,7 @@ ex1-ubuntu-1  | 0 added, 0 removed; done.
 ex1-ubuntu-1  | Running hooks in /etc/ca-certificates/update.d...
 ex1-ubuntu-1  | done.
 ex1-nginx-1   | 172.21.0.3 - - [25/Dec/2023:16:27:38 +0000] "GET / HTTP/1.1" 200 615 "-" "curl/7.81.0" "-"
+...
 ```
 
 
@@ -846,9 +1023,8 @@ ex1-nginx-1   | 172.21.0.3 - - [25/Dec/2023:16:27:38 +0000] "GET / HTTP/1.1" 200
 
 다음 `docker-compose.yaml`파일을 이용하여 프로젝트를 실행합니다. 
 
-`docker-compose.yaml`
-
 ```yaml
+# docker-compose.yaml
 version: "3.8"
 name: "cloud_wave"
 
@@ -914,7 +1090,7 @@ networks:
     name: "db"
 ```
 
-**출력 예시**
+
 
 ```cmd
 $ docker compose up -d
@@ -933,6 +1109,7 @@ $ docker compose up -d
 `docker-compose.yaml`에서 `frontend` 서비스를 제거합니다.
 
 ```yaml
+# docker-compose.yaml
 version: "3.8"
 name: "cloud_wave"
 
@@ -2711,7 +2888,19 @@ volumes:
 
 
 
-### [실습 -3] Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
+### [실습-3] Web Appliation 서버?
+
+> (deploy) replica 설정
+>
+> health check 설정
+>
+> anchor&alias 설정 -> Anchor는 제시해주기?
+
+
+
+### [실습-2] EC2 인스턴스에서 컨테이너 실행하기
+
+> Web & DB로 구성된 docker compose 구성하기 + PgAdmin은 profile로 구상 + Init용 컨테이너 추가
 
 
 

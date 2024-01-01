@@ -781,6 +781,44 @@ $ docker exec --workdir /bin clock sh -c "pwd"
 
 
 
+### 컨테이너 종료 & 시작
+
+> https://docs.docker.com/engine/reference/commandline/stop/
+>
+> https://docs.docker.com/engine/reference/commandline/start/
+
+```shell
+# 종료
+docker stop <NAME_OR_ID>
+# 시작
+docker start <NAME_OR_ID>
+```
+
+
+
+**주의사항**
+
+- `Dockerfile`을 통해 실행되지 않은 프로세스들은 종료 후 재시작할 경우 살아나지 않습니다. 
+
+```cmd
+$ docker run -d --name server ubuntu
+$ docker exec -d server /bin/bash -c "while true; do $(echo date); sleep 1; done"
+$ docker exec server ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 16:57 pts/0    00:00:00 /bin/bash
+root         9     0  0 17:05 pts/1    00:00:00 /bin/sh
+root       225     0  0 17:08 ?        00:00:00 /bin/bash -c while true; do $(echo date); sleep 1; done
+
+$ docker stop server
+$ docker start server
+$ docker exec server ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 17:11 pts/0    00:00:00 /bin/bash
+root         9     0  0 17:11 ?        00:00:00 ps -ef
+```
+
+
+
 ### 컨테이너 중지 & 재실행
 
 > https://docs.docker.com/engine/reference/commandline/pause/
@@ -816,44 +854,6 @@ UID        PID  PPID  C STIME TTY          TIME CMD
 root         1     0  0 16:57 pts/0    00:00:00 /bin/bash
 root         9     0  0 17:05 pts/1    00:00:00 /bin/sh
 root       225     0  0 17:08 ?        00:00:00 /bin/bash -c while true; do $(echo date); sleep 1; done
-```
-
-
-
-### 컨테이너 종료 & 시작
-
-> https://docs.docker.com/engine/reference/commandline/stop/
->
-> https://docs.docker.com/engine/reference/commandline/start/
-
-```shell
-# 종료
-docker stop <NAME_OR_ID>
-# 시작
-docker start <NAME_OR_ID>
-```
-
-
-
-**주의사항**
-
-- `Dockerfile`을 통해 실행되지 않은 프로세스들은 종료 후 재시작할 경우 살아나지 않습니다. 
-
-```cmd
-$ docker run -d --name server ubuntu
-$ docker exec -d server /bin/bash -c "while true; do $(echo date); sleep 1; done"
-$ docker exec server ps -ef
-UID        PID  PPID  C STIME TTY          TIME CMD
-root         1     0  0 16:57 pts/0    00:00:00 /bin/bash
-root         9     0  0 17:05 pts/1    00:00:00 /bin/sh
-root       225     0  0 17:08 ?        00:00:00 /bin/bash -c while true; do $(echo date); sleep 1; done
-
-$ docker stop server
-$ docker start server
-$ docker exec server ps -ef
-UID        PID  PPID  C STIME TTY          TIME CMD
-root         1     0  0 17:11 pts/0    00:00:00 /bin/bash
-root         9     0  0 17:11 ?        00:00:00 ps -ef
 ```
 
 
@@ -1326,7 +1326,7 @@ $ docker build -t cloudwave:base.v1 .
 정상적으로 `docker`가 설치되었다면 다음과 같은 결과를 얻을 수 있습니다. 
 
 ```cmd
-$ docker run cloudwave:aws-cli docker version
+$ docker run cloudwave:base.v1 docker version
 Client: Docker Engine - Community
  Version:           24.0.7
  API version:       1.43
