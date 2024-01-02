@@ -439,7 +439,7 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 | `--publish`     | `-p`  |         | 컨테이너의 포트를 공개합니다.            |
 | `--rm`          |       |         | 컨테이너가 종료되면 자동으로 삭제합니다. |
 | `--interactive` | `-i`  |         | `STDIN`을 활성화합니다.                  |
-| `-tty`          | `-t`  |         | `pseudo-TTY`를 할당합니다.               |
+| `--tty`         | `-t`  |         | `pseudo-TTY`를 할당합니다.               |
 | `--volume`      | `-v`  |         | 볼륨을 설정합니다.                       |
 
 
