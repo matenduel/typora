@@ -221,7 +221,7 @@ statefulsets                      sts          apps/v1                          
 
 
 
-#### 리소스 생성하기
+#### `Configuration` 적용하기
 
 ```cmd
 $ kubectl apply (-f FILENAME | -k DIRECTORY) [options]
@@ -245,8 +245,6 @@ NAME     READY   STATUS             RESTARTS         AGE   LABELS
 nginx    2/3     CrashLoopBackOff   81 (3m22s ago)   9h    env=dev,project=cloudwave
 ubuntu   1/1     Running            1 (170m ago)     9h    env=dev,project=cloudwave
 ```
-
-
 
 ##### [예시] `Namespace` 목록보기
 
@@ -277,14 +275,14 @@ $ kubectl delete ([-f FILENAME] | [-k DIRECTORY] | TYPE [(NAME | -l label | --al
 
 
 
-##### [예시]
+##### [예시] `deployment` 삭제하기
 
 ```cmd
 $ kubectl delete deployment nginx-deployment
 deployment.apps "nginx-deployment" deleted
 ```
 
-
+##### [예시] `pod` 삭제하기
 
 ```cmd
 $ kubectl delete pod nginx 
