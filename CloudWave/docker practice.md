@@ -1132,6 +1132,53 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 
 
+##### - Distroless 이미
+
+> https://github.com/GoogleContainerTools/distroless
+
+`Distroless` 이미지는 애플리케이션 실행에 필요한 런타임 종속성만 포함되어있습니다. 
+`bash` 와 같은 셸도 포함하고 있지 않아 보안성이 매우 뛰어납니다. 
+
+
+
+### Multi-stage builds
+
+> https://docs.docker.com/build/building/multi-stage/
+
+일반적으로 어플리케이션을 실행하기 위한 환경(`runtime dependencies`)과 빌드용 환경(`build-time dependencies`)은 같지 않습니다. 따라서 `Production` 환경에서 보안성 증대 및 이미지 경량화등을 위해 `Multi-stage build`를 활용하여 어플리케이션 코드를 `build`한 이후, `runtime `을 위한 이미지로 옮겨 사용하는 경우가 많습니다. 
+
+
+
+#### 사용 예시
+
+- 보안 강화 및 이미지 경량화를 위해 빌드용 이미지와 배포용 이미지를 따로 사용하는 경우
+
+```dockerfile
+# 'golang:1.19-alpine' 이미지를 이용하여 Go Applicatoin을 컴파일 합니다. 
+FROM golang:1.19-alpine as build
+WORKDIR /app
+COPY src ./
+RUN CGO_ENABLED=0 go build -o main
+
+---
+# 위에서 컴파일한 소스코드만 'Scratch' 이미지로 가져옵니다. 
+FROM scratch as release
+COPY --from=build /app/main /app/
+WORKDIR /app
+CMD ["/app/main"]
+```
+
+
+
+- 필요한 `Package` 또는 파일을 다른 이미지에서 가져오는 경우
+
+```dockerfile
+# 'nginx:latest' 이미지에서 'nginx.conf' 파일을 가져옵니다. 
+COPY --from=nginx:latest /etc/nginx/nginx.conf /nginx.conf
+```
+
+
+
 
 
 ---
@@ -2541,6 +2588,39 @@ docker buildx create [OPTIONS] [CONTEXT|ENDPOINT]
 
 
 
+##### Dirver별 특징
+
+> https://docs.docker.com/build/drivers/
+
+| Feature                      | `docker` | `docker-container` | `kubernetes` |      `remote`      |
+| :--------------------------- | :------: | :----------------: | :----------: | :----------------: |
+| **Automatically load image** |    ✅     |                    |              |                    |
+| **Cache export**             |    ✓*    |         ✅          |      ✅       |         ✅          |
+| **Tarball output**           |          |         ✅          |      ✅       |         ✅          |
+| **Multi-arch images**        |          |         ✅          |      ✅       |         ✅          |
+| **BuildKit configuration**   |          |         ✅          |      ✅       | Managed externally |
+
+
+
+##### [예시] `Multi-platform`용 `builder` 생성하기
+
+```cmd
+$ docker buildx create --driver docker-container --name multi-builder --platform linux/amd64,linux/arm64
+
+$ docker buildx inspect multi-builder                                                                    
+Name:          multi-builder
+Driver:        docker-container
+Last Activity: 2024-07-07 06:39:02 +0000 UTC
+
+Nodes:
+Name:      multi-builder0
+Endpoint:  npipe:////./pipe/docker_engine
+Status:    inactive
+Platforms: linux/amd64*, linux/arm64*
+```
+
+
+
 #### builder 정보 조회
 
 > https://docs.docker.com/engine/reference/commandline/buildx_inspect/
@@ -2840,135 +2920,193 @@ arch: arm/v7
 
 ## 종합 문제
 
-### [실습-1] `cloudwave:base.v1`에 `terraform` 설치하기
+### [실습-1] `code-server` 실행하기
 
-- `cloudwave:base.v1` 이미지를 사용하여 컨테이너를 생성합니다.
-  - 컨테이너의 이름은 `base`로 설정합니다. 
+> `code-server`는 Web에서 VS Code를 사용할 수 있게 만들어주는 서비스입니다. 
+> ![code-server](docker practice.assets/code-server-banner.png)
 
-- `base` 컨테이너에 접속합니다. 
-- 다음 스크립트를 이용하여 `terraform`을 설치합니다. 
+- `linuxserver/code-server:4.90.3` 이미지를 사용하여 컨테이너를 생성합니다.
 
-```cmd
-$ apt-get update && apt-get install -y gnupg software-properties-common wget
+  - 컨테이너의 이름은 `ide`로 설정합니다. 
+  - 8443 포트를 노출합니다.
 
-$ wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+- 다음과 같이 환경변수를 설정합니다. 
 
-$ gpg --no-default-keyring \
---keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg \
---fingerprint
-# Output
-/usr/share/keyrings/hashicorp-archive-keyring.gpg
--------------------------------------------------
-pub   rsa4096 2023-01-10 [SC] [expires: 2028-01-09]
-      798A EC65 4E5C 1542 8C8E  42EE AA16 FCBC A621 E701
-uid           [ unknown] HashiCorp Security (HashiCorp Package Signing) <security+packaging@hashicorp.com>
-sub   rsa4096 2023-01-10 [S] [expires: 2028-01-09]
-
-$ echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
-tee /etc/apt/sources.list.d/hashicorp.list
-
-$ apt update
-
-$ apt-get install -y terraform=1.6.6-1
-
-$ terraform --version
-Terraform v1.6.6
-on linux_amd64
-```
-
-- `commit`을 이용하여 `base` 컨테이너를 저장합니다. 
-  - 이미지 이름은 `cloudwave:practice.v1`으로 설정합니다. 
-
-
-
-### [실습-2] 컨테이너를 사용하여 `terraform` 코드 실행하기
-
-> `terraform destroy` 명령어를 통해 전개된 AWS 인프라를 제거할 수 있습니다. 
->
-> ! `volume`을 삭제하면 `terraform`을 통해 생성한 인프라를 관리할 수 없게 됩니다.
-
-- `source_code`이름을 가진 `volume`을 생성합니다. 
-
-- `GitSync` 컨테이너를 실행합니다.
-
-  > https://github.com/kubernetes/git-sync/releases/tag/v4.1.0
-
-  - 이미지는 `registry.k8s.io/git-sync/git-sync:v4.1.0`를 사용합니다.
-
-  - `source_code` 볼륨을 `/code`에 마운트합니다.
-
-  - 다음과 같이 환경 변수를 설정합니다. 
-    ```tex
-    GITSYNC_REPO=<REPO_URL>
-    GITSYNC_ROOT=/code/git
-    GITSYNC_REF=main
-    GITSYNC_DEPTH=1
-    GITSYNC_ONE_TIME=1
-    ```
-
-- `cloud_wave:practice.v1` 컨테이너를 실행합니다. 
-
-  - `source_code` 볼륨을 `/terraform`에 마운트합니다.
-
-  - 다음과 같이 환경 변수를 설정합니다.
-    ``` tex
-    AWS_ACCESS_KEY_ID=<ACCESS_KEY>
-    AWS_SECRET_ACCESS_KEY=<SECRET_KEY>
-    AWS_DEFAULT_REGION=ap-northeast-2
-    ```
-
-- `exec`를 사용하여 `/terraform` 디렉토리에서 다음 명령어를 실행합니다. 
-
-  ```shell
-  # Terraform 사용을 위해 초기화 합니다. 
-  terraform init
-  # Infra 변경사항들을 보여줍니다.
-  terraform plan
-  # Infra 변경사항을 적용합니다. 
-  terraform apply -var="aws_access_key=${AWS_ACCESS_KEY_ID}" -var="aws_secret_key=${AWS_SECRET_ACCESS_KEY}" -auto-approve
+  ```
+  PASSWORD=password
+  DEFAULT_WORKSPACE=/code
+  PUID=1000
+  PGID=1000
+  TZ="Asia/Seoul"
   ```
 
-- `AWS Console`을 이용하여 생성된 인프라를 확인합니다.
+- 다음과 같이 Volume을 설정합니다. 
+
+  - 로컬 머신의 `src` 디렉토리를 컨테이너의 `/code` 디렉토리에 마운트 합니다.
+  - 로컬 머신의 `/var/run/docker.sock`를 컨테이너의 `/var/run/docker.sock`에 마운트 합니다. 
+
+- 브라우저에서 `localhost:8443` 로 접속하여 서비스가 사용 가능한지 확인합니다. 
 
 
 
-### [실습-3] 실습용 이미지 제작하기
+### [실습-2] `Code-server`에 `Docker` 설치하기
 
-- `driver`가 `docker-container`인 `builder`를 생성합니다. 
-- `cloudwave:base.v1`을 기반으로 `terraform`과 `awscli`를 설치하는 `Dockerfile`을 작성합니다. 
-  - `[실습-1]`을 참고하여 작성하면 됩니다. 
+- `exec` 를 사용하여 컨테이너의 Shell에 접근합니다. 
+- 다음 스크립트를 사용하여 Docker를 설치합니다. 
+  - https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
-- 위에서 생성한 `Dockerfile`을 이용하여 `multi-platform`용 이미지를 생성하고 `ECR` 업로드합니다.
-  - 해당 이미지는 `linux/amd64`와 `linux/arm/v6`을 지원해야 합니다. 
-  - 이미지의 이름은 `cloudwave:practice.v1`으로 설정합니다. 
+```shell
+apt-get update
+apt-get install ca-certificates curl
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
 
-
-
-### [실습-4] EC2 인스턴스에서 컨테이너 실행하기
-
-- `ssh`를 이용하여 `EC2`에 접속합니다. 
-
-```cmd
-$ ssh -i <PATH> <IP>
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update
+apt-get install -y docker-ce docker-ce-cli
 ```
 
-- `EC2`에 `Docker`를 설치합니다. 
-- `network`와 `volume`을 생성합니다.
-  - `network` 이름은 `aws_net`으로 설정합니다. 
-  - `driver`는 `bridge`로 설정합니다. 
-- `volume`을 생성합니다.
-  - `volume` 이름은 `pg_data`로 설정합니다. 
-- 다음 조건을 만족하는 `DB` 컨테이너를 실행합니다.
-  - 위에서 생성한 `aws_net`만 연결되어 있어야합니다.
-  - `volume`을 `/var/lib/postgresql/data`에 마운트합니다. 
-- 다음 조건을 만족하는 `PgAdmin` 컨테이너를 실행합니다. 
-  - `aws_net`와 `default` 네트워크가 연결되어 있어야합니다.
-  - 외부에서 접근할 수 있도록 `host`의 80 포트와 컨테이너의 80포트를 바인딩합니다. 
-  - `POSTGRES_PASSWORD` 환경 변수를 설정합니다.
-- `EC2`의 `IP`를 이용하여 `PgAdmin`에 접속합니다. 
-  - `http://IP:80`
-- `DB`를 연결합니다. 
+- `VSC` 터미널에서 다음 명령어를 사용하여 Docker 버젼을 확인합니다.
+
+```shell
+docker --version
+```
+
+![image-20240706234414182](docker practice.assets/image-20240706234414182.png)
+
+
+
+### [실습-3] 실습용 이미지 제작하고 푸시하기
+
+- 다음 조건을 만족하는 `Dockerfile`을 작성하세요.
+
+  - `Digest`를 사용하여 `code-server`의 버젼을 지정하세요.
+
+    - `sha256:086c9625a89bec4ea651cea26ee5ec7c242fe3d318fdc9142fd89b091bae04e6` 
+
+  - 다음과 같이 환경 변수를 설정하세요
+
+    - TZ="Asia/Seoul"
+    - PUID=1000
+    - PGID=1000
+
+  - 다음 스크립트를 참고하여 패키지들을 설치하세요.
+
+    - Ubuntu Update
+
+      ```sh
+      apt-get update && apt-get -y upgrade
+      apt install -y ca-certificates curl gnupg software-properties-common wget unzip apt-transport-https
+      ```
+
+    - Docker CLI
+
+      ```sh
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      
+      # Add the repository to Apt sources:
+      echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+      apt-get update
+      apt-get install -y docker-ce docker-ce-cli
+      ```
+
+    - AWS CLI
+
+      ```sh
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip awscliv2.zip
+      sudo ./aws/install
+      ```
+
+      
+
+    - Terraform
+
+      ```sh
+      apt-get update && apt-get install -y gnupg software-properties-common
+      
+      wget -O- https://apt.releases.hashicorp.com/gpg | \
+      gpg --dearmor | \
+      tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+      
+      gpg --no-default-keyring \
+      --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+      --fingerprint
+      
+      echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+      https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+      tee /etc/apt/sources.list.d/hashicorp.list
+      
+      apt update && apt-get install -y terraform=1.6.6-1
+      ```
+
+      
+
+    - Kubectl
+
+      ```sh
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      
+      echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+      
+      apt-get update && apt-get install -y kubectl
+      ```
+
+      
+
+    - Kubens & Kubectx
+
+      ```sh
+      git clone https://github.com/ahmetb/kubectx /opt/kubectx  \
+          && ln -s /opt/kubectx/kubectx /usr/local/bin/kubectx  \
+          && ln -s /opt/kubectx/kubens /usr/local/bin/kubens
+      ```
+
+- `Dockerfile`을 이용하여 이미지를 빌드하세요 
+  - 이름은 `cloudwave`로 설정해주세요
+  - Tag는 `practice.v1`으로 설정해주세요
+- `Docker Hub`에 이미지 푸시하세요
+
+
+
+### [Extra] `buildx`를 이용하여 `Docker Hub`에 `Multi platform` 이미지를 `Push` 하기
+
+- [선택] `docker login`을 이용하여 `Registry`에 로그인하세요.
+
+- 다음 조건을 만족하는 `builder`를 생성하세요
+
+  - `linux/amd64`와 `linux/arm64`를 지원해야 합니다.
+  -  `docker-container`를 `driver`로 설정하세요
+
+- 다음 조건을 만족하는 `Dockerfile`을 작성하세요.
+
+  - `Digest`대신 `tag`를 사용하세요
+
+  - `Multi-stage`를 이용하여 `amazon/aws-cli:2.17.9` 이미지에서 `aws-cli` 패키지를 복사하세요.
+
+    - `aws-cli`는 `/usr/local/aws-cli/v2`에 설치되어 있습니다. 
+    - `aws` 명령어를 사용하기 위해서 다음과 같이 `Symbolic link`를 설정하세요.
+
+    ```sh
+    ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws
+    ln -s /usr/local/aws-cli/v2/current/bin/aws_completer /usr/local/bin/aws_completer
+    ```
+
+  - `aws-cli`를 제외한 나머지 패키지는 기존 방식대로 설치해도 상관 없습니다. 
+
+- `Docker Hub`에서 다음과 같이 `Multi-platform` 이미지가 `Push`되었는지 체크합니다. 
+
+![image-20240707014910268](docker practice.assets/image-20240707014910268.png)
 
 
 
