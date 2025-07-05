@@ -342,12 +342,13 @@ $ docker inspect ubuntu:22.04
 
 #### [연습] ARM용 Ubuntu 다운로드하기
 
-다음 명령어를 이용하여 `ubuntu:22.04`의 `linux/arm`용 이미지를 다운로드할 수 있습니다. 
+다음 명령어를 이용하여 `ubuntu:22.04`의 `linux/arm64`용 이미지를 다운로드할 수 있습니다. 
 
 ```cmd
-$ docker pull ubuntu:22.04 --platform linux/arm
+$ docker pull ubuntu:22.04 --platform linux/arm64/v8
 22.04: Pulling from library/ubuntu
-Digest: sha256:6042500cf4b44023ea1894effe7890666b0c5c7871ed83a97c36c76ae560bb9b
+e730d307d74e: Pull complete
+Digest: sha256:3c61d3759c2639d4b836d32a2d3c83fa0214e36f195a3421018dbaaf79cbe37f
 Status: Downloaded newer image for ubuntu:22.04
 docker.io/library/ubuntu:22.04
 ```
@@ -358,7 +359,7 @@ docker.io/library/ubuntu:22.04
 
 ```cmd
 $ docker inspect ubuntu:22.04 -f "{{ .Architecture }}"
-arm
+arm64
 ```
 
 
@@ -429,18 +430,18 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 **주요 옵션**
 
-| Option          | Short | Default | Description                              |
-| --------------- | ----- | ------- | ---------------------------------------- |
-| `--name`        |       |         | 컨테이너의 이름을 지정합니다.            |
-| `--detach`      | `-d`  |         | 컨테이너를 백그라운드에서 실행합니다.    |
-| `--env`         | `-e`  |         | 환경 변수를 설정합니다.                  |
-| `--env-file`    |       |         | 환경 변수를 저장한 파일을 설정합니다.    |
-| `--expose`      |       |         | 포트 또는 포트 범위를 노출합니다.        |
-| `--publish`     | `-p`  |         | 컨테이너의 포트를 공개합니다.            |
-| `--rm`          |       |         | 컨테이너가 종료되면 자동으로 삭제합니다. |
-| `--interactive` | `-i`  |         | `STDIN`을 활성화합니다.                  |
-| `--tty`         | `-t`  |         | `pseudo-TTY`를 할당합니다.               |
-| `--volume`      | `-v`  |         | 볼륨을 설정합니다.                       |
+| Option          | Short | Default | Description                                                  |
+| --------------- | ----- | ------- | ------------------------------------------------------------ |
+| `--name`        |       |         | 컨테이너의 이름을 지정합니다.                                |
+| `--detach`      | `-d`  |         | 컨테이너를 백그라운드에서 실행합니다.                        |
+| `--env`         | `-e`  |         | 환경 변수를 설정합니다.                                      |
+| `--env-file`    |       |         | 환경 변수를 저장한 파일을 설정합니다.                        |
+| `--expose`      |       |         | 포트 또는 포트 범위를 노출합니다.                            |
+| `--publish`     | `-p`  |         | 컨테이너의 포트를 공개합니다. (`-p HOST_PORT:CONTAINER_PORT`) |
+| `--rm`          |       |         | 컨테이너가 종료되면 자동으로 삭제합니다.                     |
+| `--interactive` | `-i`  |         | `STDIN`을 활성화합니다.                                      |
+| `--tty`         | `-t`  |         | `pseudo-TTY`를 할당합니다.                                   |
+| `--volume`      | `-v`  |         | 볼륨을 설정합니다.                                           |
 
 
 
@@ -1107,7 +1108,7 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 #### 주의사항
 
 - `-f`를 통해 사용할 `Dockerfile`을 명시하지 않는 경우, 파일 이름이 `Dockerfile`인 파일이 사용됩니다. 
-- `Dockerfile`내 모든 상대 경로들은 `build`시 입력된 `Path`를 기준으로 계산됩니다. 
+- `Dockerfile`내 모든 상대 경로들은 `build`시 입력된 `Path(Context)`를 기준으로 계산됩니다. 
 - `cache`를 사용할 경우, `apt-get`을 통해 설치한 패키지 버젼이 최신이 아닐 수 있습니다. 
 
 
@@ -1132,7 +1133,7 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 
 
-##### - Distroless 이미
+##### - Distroless 이미지
 
 > https://github.com/GoogleContainerTools/distroless
 
@@ -1145,7 +1146,7 @@ $ docker buildx build [OPTIONS] PATH | URL | - [-f <PATH_TO_FILE>]
 
 > https://docs.docker.com/build/building/multi-stage/
 
-일반적으로 어플리케이션을 실행하기 위한 환경(`runtime dependencies`)과 빌드용 환경(`build-time dependencies`)은 같지 않습니다. 따라서 `Production` 환경에서 보안성 증대 및 이미지 경량화등을 위해 `Multi-stage build`를 활용하여 어플리케이션 코드를 `build`한 이후, `runtime `을 위한 이미지로 옮겨 사용하는 경우가 많습니다. 
+일반적으로 어플리케이션을 실행하기 위한 환경(`runtime dependencies`)과 빌드용 환경(`build-time dependencies`)은 같지 않습니다. 따라서 `Production` 환경에서 보안성 증대 및 이미지 경량화등을 위해 `Multi-stage build`를 활용하여 어플리케이션 코드를 `build`한 이후, `runtime`을 위한 이미지로 옮겨 사용하는 경우가 많습니다. 
 
 
 
@@ -1297,7 +1298,6 @@ Hello, Worlds!
 각 이미지별 크기는 다음과 같이 확인할 수 있습니다. 
 
 ```cmd
-$ docker build -t go:<TAG_NAME> .
 $ docker images go
 REPOSITORY   TAG       IMAGE ID       CREATED              SIZE
 go           debian    7b5f70dd7edf   About a minute ago   1.02GB
@@ -1321,19 +1321,22 @@ go           scratch   97bcb5fd82c5   26 seconds ago       6.47MB
 
 **install_docker_engine.sh**
 
+> https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+
 ```shell
+# Add Docker's official GPG key:
 apt-get update && apt-get upgrade
 apt-get install -y ca-certificates curl gnupg
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
 
 # Add the repository to Apt sources:
 echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt-get update && apt-get upgrade
+apt-get update
 ```
 
 **Dockerfile**
@@ -1349,7 +1352,7 @@ WORKDIR /scripts
 RUN chmod +x install_docker_engine.sh
 RUN ./install_docker_engine.sh
 
-RUN apt-get install -y docker-ce docker-ce-cli
+RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
 
@@ -1385,7 +1388,8 @@ Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docke
    1. `ARG`이름은 `OS`로 설정합니다.
    2. `ARG`를 이용하여 `Base 이미지`를 입력받아야 합니다.  
    3. `ARG`의 값을 환경변수(`BASE`)에 저장합니다.  
-2. `--build-args` 옵션을 사용하여 `ubuntu:22.04`, `alpine:latest`를 기반으로한 이미지를 생성합니다. 
+2. `--build-args` 옵션을 사용하여 `Debian(bullseye)`, `alpine`를 기반으로한 이미지를 생성합니다. 
+3. `exec`를 이용하여 환경변수 `BASE` 값을 확인합니다.  
 
 
 
@@ -1990,6 +1994,8 @@ $ docker build -t was:fast.1 .
 
 
 다음 명령어를 통해서 `FastAPI` 서버를 실행합니다. 
+
+> 사용하는 환경이 Window면 \ 를 사용하고 Linux 또는 WSL이라면 / 를 사용합니다.
 
 ```cmd
 $ docker run --name bind -p 80:80 -v <FOLDER_PATH>\app:/code/app was:fast.1
