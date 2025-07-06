@@ -2941,8 +2941,8 @@ arch: arm/v7
   ```
   PASSWORD=password
   DEFAULT_WORKSPACE=/code
-  PUID=1000
-  PGID=1000
+  PUID=0
+  PGID=0
   TZ="Asia/Seoul"
   ```
 
@@ -2962,8 +2962,9 @@ arch: arm/v7
   - https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
 ```shell
-apt-get update
-apt-get install ca-certificates curl
+# Add Docker's official GPG key:
+apt-get update && apt-get upgrade
+apt-get install -y ca-certificates curl gnupg
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
@@ -2971,7 +2972,7 @@ chmod a+r /etc/apt/keyrings/docker.asc
 # Add the repository to Apt sources:
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update
 apt-get install -y docker-ce docker-ce-cli
@@ -2998,8 +2999,8 @@ docker --version
   - 다음과 같이 환경 변수를 설정하세요
 
     - TZ="Asia/Seoul"
-    - PUID=1000
-    - PGID=1000
+    - PUID=0
+    - PGID=0
 
   - 다음 스크립트를 참고하여 패키지들을 설치하세요.
 
@@ -3020,7 +3021,7 @@ docker --version
       # Add the repository to Apt sources:
       echo \
         "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
         tee /etc/apt/sources.list.d/docker.list > /dev/null
       apt-get update
       apt-get install -y docker-ce docker-ce-cli
