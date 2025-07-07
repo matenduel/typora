@@ -1985,6 +1985,15 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
 
 
 
+**requirements.txt**
+
+```tex
+fastapi[standard]>=0.113.0,<0.114.0
+pydantic>=2.7.0,<3.0.0
+```
+
+
+
 `Dockerfile`이 위치한 폴더에서 다음 명령어를 실행하여 이미지를 빌드합니다.
 
 ```cmd
